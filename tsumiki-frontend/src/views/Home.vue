@@ -275,25 +275,26 @@
 
         // 秒传
         if (diskApi.isDetailResponse(initRes)) {
-            const tmp_item = { name: uploadFile.name, progress: 33 }
-            uploadStore.addUpload(tmp_item);
+            const item = { name: uploadFile.name, progress: 33 }
+            uploadStore.addUpload(item);
             await new Promise(resolve => setTimeout(resolve, 1000));
-            uploadStore.updateProgress(tmp_item, 66);
+            uploadStore.updateProgress(item, 66);
             await new Promise(resolve => setTimeout(resolve, 1000));
-            uploadStore.updateProgress(tmp_item, 100);
+            uploadStore.updateProgress(item, 100);
 
             await userStore.fetchUser();
             if (currentPath.value === originalPath) {
                 await loadDirectory(currentPath.value);
             }
             message.success(initRes.detail);
-            uploadStore.removeUpload(tmp_item);
+            uploadStore.removeUpload(item);
         }
+
         // 新上传 / 断点续传
         else {
             const chunks = await calculateChunkMD5(uploadFile, chunkSize, initRes.chunk_index);
 
-            const item = { name: uploadFile.name, progress: Math.round(((initRes.chunk_index + 1) / initRes.total_chunks) * 100) };
+            const item = { name: uploadFile.name, progress: Math.round(((initRes.chunk_index) / initRes.total_chunks) * 100) };
             uploadStore.addUpload(item);
 
             const firstChunk = chunks[initRes.chunk_index - initRes.chunk_index] as Chunk
@@ -304,10 +305,19 @@
                 'upload_file': firstChunk.blob
             }
 
-            let currentStatus = initRes.status
+            if (initRes.chunk_index === 0) {
+                message.info(`开始上传 ${uploadFile.name}`);
+            } else {
+                message.info(`正在从 ${item.progress}% 继续上传 ${uploadFile.name}`);
+            }
+
+            let currentStatus = initRes.status;
             try {
                 while (currentStatus === Status.UPLOADING) {
                     const res = await diskApi.chunk_upload(userStore.user_id, currentChunkMetadata)
+
+                    // 更新进度
+                    uploadStore.updateProgress(item, Math.round(((res.chunk_index) / res.total_chunks) * 100));
 
                     if ((currentStatus = res.status) === Status.FINISHED) {
                         const res = await diskApi.createFile(userStore.user_id, originalPath, {
@@ -325,9 +335,6 @@
                         }
                         return;
                     }
-
-                    // 更新进度
-                    uploadStore.updateProgress(item, Math.round(((res.chunk_index + 1) / initRes.total_chunks) * 100));
 
                     const currentChunk = chunks[res.chunk_index - initRes.chunk_index] as Chunk
                     currentChunkMetadata.id = res.id
