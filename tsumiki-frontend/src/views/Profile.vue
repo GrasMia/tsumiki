@@ -6,11 +6,11 @@
                 <n-tab-pane name="info" tab="基本信息">
                     <n-form :model="profileForm" :rules="profileRules" ref="profileFormRef" label-placement="left"
                         label-width="100">
-                        <n-form-item label="用户名" path="username">
+                        <n-form-item label="用户名" path="new_username">
                             <n-input :placeholder="userStore.user.username" v-model:value="profileForm.new_username"
                                 @keydown="preventSpace" @keyup.enter="updateProfile" />
                         </n-form-item>
-                        <n-form-item label="邮箱" path="email">
+                        <n-form-item label="邮箱" path="new_email">
                             <n-input :placeholder="userStore.user.email" v-model:value="profileForm.new_email"
                                 @keydown="preventSpace" @keyup.enter="updateProfile" />
                         </n-form-item>
@@ -93,8 +93,8 @@
     });
 
     const profileRules: FormRules = {
-        username: { min: 5, message: '用户名长度不能少于5位', trigger: 'blur' },
-        email: [{ type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }]
+        new_username: { min: 5, message: '用户名长度不能少于5位', trigger: 'blur' },
+        new_email: [{ type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }]
     };
 
     const passwordForm = reactive({
@@ -136,7 +136,7 @@
 
     // 更新个人信息
     const updateProfile = async () => {
-        try { await profileFormRef.value?.validate() }
+        try { await profileFormRef.value?.validate(); }
         catch { return; }
 
         if (userStore.user.username == profileForm.new_username || !profileForm.new_username) { profileForm.new_username = ""; }

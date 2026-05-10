@@ -57,7 +57,7 @@
                             上传文件
                         </n-button>
                     </n-upload>
-                    <n-button @click="refreshFileList" type="tertiary">
+                    <n-button @click="throttledRefreshFileList" type="tertiary">
                         <template #icon><n-icon><refresh-outline /></n-icon></template>
                         刷新
                     </n-button>
@@ -81,7 +81,7 @@
             <div class="table-container">
                 <file-table :data="filteredFileList" :loading="loading" :row-key="(row: DataItem) => row.name"
                     :bordered="true" :striped="true" @rename="handleRename" @enter-dir="enterDir"
-                    @download-file="handleDownload" @delete="handleDelete" @row-dblclick="handleRowDblclick" />
+                    @download-file="throttledHandleDownload" @delete="handleDelete" @row-dblclick="handleRowDblclick" />
             </div>
 
             <!-- 新建目录对话框 -->
@@ -146,7 +146,7 @@
     import FileTable from '@/components/FileTable.vue';
     import { calculateChunkMD5, calculateSHA256, type Chunk } from '@/utils/crypto';
     import { formatStorage, preventSpace } from '@/utils/format';
-    import { debounce } from '@/utils/frequency';
+    import { debounce, throttle } from '@/utils/frequency';
 
     const route = useRoute();
     const router = useRouter();
@@ -216,6 +216,7 @@
         await loadDirectory(currentPath.value);
         message.success('刷新成功');
     };
+    const throttledRefreshFileList = throttle(refreshFileList, 1500);
 
     const navigateTo = (path: string) => {
         if (path) router.push(`/${userStore.user.username}/${path}`);
@@ -361,10 +362,11 @@
     const handleDownload = (fileName: string) => {
         diskApi.downloadFile(userStore.user_id, currentPath.value, fileName, userStore.token)
     };
+    const throttledHandleDownload = throttle(handleDownload, 200);
 
     const downloadSelectedFile = () => {
         if (selectedFileRow.value) {
-            handleDownload(selectedFileRow.value.name);
+            throttledHandleDownload(selectedFileRow.value.name);
             showFileDetail.value = false;
         }
     };
@@ -419,6 +421,13 @@
         });
     };
 
+    const handleLogoutPositiveClick = async () => {
+        const res = await userStore.logout();
+        router.push('/login');
+        message.success(res.detail);
+    }
+    const throttledLogout = throttle(handleLogoutPositiveClick, 500);
+
     const handleUserMenuSelect = (key: string) => {
         if (key === 'logout') {
             live2dAlert("もう離れるの")
@@ -430,11 +439,7 @@
                 negativeText: '取消',
                 blockScroll: true,
                 closeOnEsc: true,
-                onPositiveClick: async () => {
-                    const res = await userStore.logout();
-                    router.push('/login');
-                    message.success(res.detail);
-                }
+                onPositiveClick: throttledLogout
             });
         }
         if (key === 'profile') {
