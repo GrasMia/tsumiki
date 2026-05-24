@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, toRaw } from 'vue';
-import { type UploadFileInfo } from 'naive-ui';
+import { useListCacheStore } from './listCache';
 
 interface UploadItem {
     name: string;
@@ -21,8 +21,11 @@ export const useUploadStore = defineStore('upload', () => {
         }
     };
 
-    const removeUpload = (item: UploadItem) => {
+    const removeUpload = (item: UploadItem, username: string, currentPath: string) => {
         uploadQueue.value = uploadQueue.value.filter(i => toRaw(i) !== item);
+
+        // 清除上传了文件的目录的缓存
+        useListCacheStore().removeCache(username, currentPath);
     };
 
     return { uploadQueue, addUpload, updateProgress, removeUpload };

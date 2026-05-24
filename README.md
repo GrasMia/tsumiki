@@ -35,6 +35,7 @@
 | Routing                       | Vue Router                                                                  |
 | Language                      | TypeScript                                                                  |
 | UI Components                 | Naive UI                                                                    |
+| Icons                         | vicons                                                                      |
 | Live2D                        | live2d‑widget.js by [@xiazeyu](https://github.com/xiazeyu)                  |
 | Live2D Model                  | tsumiki                                                                     |
 
@@ -67,6 +68,8 @@ npm run dev
 ## Thanks
 
 Thanks [xiazeyu / live2d-widget.js](https://github.com/xiazeyu/live2d-widget.js) – for the adorable front‑end mascot
+
+Thanks [Naive UI](https://www.naiveui.com/) – for the clean and powerful Vue 3 component library
 
 > Thanks to [UNPKG](https://unpkg.com/) for providing public CDN service.
 

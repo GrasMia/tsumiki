@@ -16,7 +16,7 @@ export const isTokenValid = (token: string) => {
 
 // 创建 ofetch 实例
 const http = ofetch.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || '',
+    baseURL: '',
     timeout: 30000,
     // 请求拦截器：添加 Token
     async onRequest({ request, options, response }) {
@@ -66,7 +66,7 @@ const http = ofetch.create({
 });
 
 const authHttp = ofetch.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || '',
+    baseURL: '',
     timeout: 30000,
     headers: { 'Content-Type': 'application/json' },
 

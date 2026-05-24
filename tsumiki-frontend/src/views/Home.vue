@@ -104,22 +104,33 @@
             <!-- 文件详情对话框 -->
             <n-modal v-model:show="showFileDetail" preset="dialog" title="文件详情" :style="{ width: '540px' }" draggable>
                 <div class="file-detail">
-                    <div class="detail-row"><span class="detail-label">文件名：</span><span class="detail-value">{{
-                        selectedFile?.name
-                            }}</span></div>
-                    <div class="detail-row"><span class="detail-label">大小：</span><span class="detail-value">{{
-                        formatStorage(selectedFile?.size || 0) }}</span></div>
-                    <div class="detail-row"><span class="detail-label">SHA256：</span><span
-                            class="detail-value sha256">{{
-                                selectedFile?.sha256 || '-' }}</span></div>
-                    <div class="detail-row"><span class="detail-label">创建时间：</span><span class="detail-value">{{ new
-                        Date(selectedFile?.created_at || '').toLocaleString() }}</span></div>
-                    <div class="detail-row"><span class="detail-label">修改时间：</span><span class="detail-value">{{ new
-                        Date(selectedFile?.modified_at || '').toLocaleString() }}</span></div>
-                    <div class="detail-row"><span class="detail-label">状态：</span><n-tag
-                            :type="selectedFile?.deleted_at ? 'error' : 'success'" size="small">{{
-                                selectedFile?.deleted_at ? '已删除'
-                                    : '正常' }}</n-tag></div>
+                    <div class="detail-row">
+                        <span class="detail-label">文件名：</span>
+                        <span class="detail-value">{{ selectedFile?.name }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">大小：</span>
+                        <span class="detail-value">{{ formatStorage(selectedFile?.size || 0) }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">SHA256：</span>
+                        <span class="detail-value sha256">{{ selectedFile?.sha256 || '-' }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">创建时间：</span>
+                        <span class="detail-value">
+                            {{ new Date(selectedFile?.created_at || '').toLocaleString() }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">修改时间：</span>
+                        <span class="detail-value">
+                            {{ new Date(selectedFile?.modified_at || '').toLocaleString() }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">状态：</span>
+                        <n-tag :type="selectedFile?.deleted_at ? 'error' : 'success'" size="small">
+                            {{ selectedFile?.deleted_at ? '已删除' : '正常' }}</n-tag>
+                    </div>
                 </div>
                 <template #action>
                     <n-space>
@@ -137,6 +148,7 @@
     import { useRoute, useRouter } from 'vue-router';
     import { useUserStore } from '@/stores/user';
     import { useUploadStore } from '@/stores/upload';
+    import { useListCacheStore } from '@/stores/listCache';
     import { type ChunkMetadata, type DataItem, type FileInfo, Status, diskApi } from '@/api/disk';
     import { useMessage, useDialog, NButton, NSpace, NInput, NIcon, NLayout, NLayoutHeader, NLayoutContent } from 'naive-ui'
     import { NCard, NStatistic, NH2, NText, NAvatar, NDropdown, NBreadcrumb, NBreadcrumbItem, } from 'naive-ui'
@@ -152,6 +164,7 @@
     const router = useRouter();
     const userStore = useUserStore();
     const uploadStore = useUploadStore();
+    const listCacheStore = useListCacheStore();
     const message = useMessage();
     const dialog = useDialog();
 
@@ -250,6 +263,7 @@
     };
 
     const chunkSize = parseInt(import.meta.env.VITE_UPLOAD_FILE_CHUNK_SIZE) * 1024 * 1024;
+
     // 文件上传
     const customUpload = async ({ file }: UploadCustomRequestOptions) => {
         // 清除文件列表
@@ -288,7 +302,7 @@
                 await loadDirectory(currentPath.value);
             }
             message.success(initRes.detail);
-            uploadStore.removeUpload(item);
+            uploadStore.removeUpload(item, userStore.user.username, originalPath);
         }
 
         // 新上传 / 断点续传
@@ -332,7 +346,7 @@
                                 await loadDirectory(currentPath.value);
                             }
                             message.success(res.detail);
-                            uploadStore.removeUpload(item);
+                            uploadStore.removeUpload(item, userStore.user.username, originalPath);
                         }
                         return;
                     }
@@ -345,7 +359,7 @@
                 }
             } catch (error: any) {
                 message.error(error instanceof Error ? error.message : String(error));
-                uploadStore.removeUpload(item);
+                uploadStore.removeUpload(item, userStore.user.username, originalPath);
             }
         }
     };
@@ -423,6 +437,7 @@
 
     const handleLogoutPositiveClick = async () => {
         const res = await userStore.logout();
+        listCacheStore.clearCache();
         router.push('/login');
         message.success(res.detail);
     }
@@ -448,17 +463,12 @@
     };
 
     // 生命周期
-    onMounted(async () => {
-        try {
-            await loadDirectory(currentPath.value);
-        } catch (e) {
-            throw e
-        }
-    });
+    onMounted(async () => await loadDirectory(currentPath.value));
 
     watch(() => route.path, async (toPath, fromPath) => {
-        if (toPath.endsWith("/"))
-            await loadDirectory(currentPath.value);
+        const matchRes = listCacheStore.matchCache(toPath, fromPath, dataList.value);
+        if (!matchRes) await loadDirectory(currentPath.value); // 未命中重新请求
+        else dataList.value = matchRes; // 命中并使用缓存
     });
 </script>
 
