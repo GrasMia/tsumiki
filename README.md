@@ -20,7 +20,7 @@
 | ORM                           | SQLAlchemy                                                                  |
 | Database                      | PostgreSQL                                                                  |
 | Database Migration            | Alembic                                                                     |
-| Auth                          | JWT + bcrypt                                                                |
+| Auth                          | OAuth2 + JWT; Argon2 for password hashing                                   |
 | Storage                       | Local disk with metadata‑driven file management                             |
 
 ---
@@ -45,7 +45,7 @@
 
 ```bash
 # Clone the repo
-git clone https://github.com/Sappfly/tsumiki.git
+git clone https://github.com/GrasMia/tsumiki.git
 cd tsumiki
 
 # Backend

@@ -219,7 +219,7 @@
     const loadDirectory = async (path: string) => {
         try {
             dataList.value = await diskApi.get_list(userStore.user_id, path);
-        } catch (e: any) {
+        } catch (e: unknown) {
             dataList.value = [];
             message.error(e instanceof Error ? e.message : String(e));
         }
@@ -255,7 +255,7 @@
             showCreateDirDialog.value = false;
             newDirName.value = '';
             await loadDirectory(currentPath.value);
-        } catch (error: any) {
+        } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
         } finally {
             createDirLoading.value = false;
@@ -283,7 +283,7 @@
             });
         }
         // 异常捕获
-        catch (error: any) {
+        catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
             return;
         }
@@ -357,7 +357,7 @@
                     currentChunkMetadata.md5 = currentChunk?.md5
                     currentChunkMetadata.upload_file = currentChunk?.blob
                 }
-            } catch (error: any) {
+            } catch (error: unknown) {
                 message.error(error instanceof Error ? error.message : String(error));
                 uploadStore.removeUpload(item, userStore.user.username, originalPath);
             }
@@ -397,7 +397,7 @@
                 const res = await diskApi.renameDir(userStore.user_id, currentPath.value, oldName, newName);
                 message.success(res.detail);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
             row.name = oldName;
         }
@@ -428,7 +428,7 @@
                     }
                     await userStore.fetchUser();
                     dataList.value = dataList.value.filter((item) => item.name !== row.name);
-                } catch (error: any) {
+                } catch (error: unknown) {
                     message.error(error instanceof Error ? error.message : String(error));
                 }
             },

@@ -58,8 +58,8 @@ const useUserStore = defineStore('user', () => {
             revokeAvatarUrl();
             // 创建新的 Blob URL
             avatarBlobUrl.value = URL.createObjectURL(blob);
-        } catch (error: any) {
-            console.error(error.message);
+        } catch (error: unknown) {
+            console.error(error instanceof Error ? error.message : String(error));
         }
     };
 

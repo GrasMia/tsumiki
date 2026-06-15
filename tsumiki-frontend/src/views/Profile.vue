@@ -155,7 +155,7 @@
                 router.push(`/${userStore.user.username}/profile`);
                 message.success(res.detail);
             }
-            catch (error: any) {
+            catch (error: unknown) {
                 message.error(error instanceof Error ? error.message : String(error));
             }
         }
@@ -166,7 +166,7 @@
                 profileForm.new_email = "";
                 message.success(res.detail);
             }
-            catch (error: any) {
+            catch (error: unknown) {
                 message.error(error instanceof Error ? error.message : String(error));
             }
         }
@@ -191,7 +191,7 @@
             await new Promise(resolve => setTimeout(resolve, 1000));
             await userStore.logout();
             router.push('/login');
-        } catch (error: any) {
+        } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
         } finally {
             passwordLoading.value = false;
@@ -209,7 +209,7 @@
             const res = await userApi.modifyAvatar(userStore.user_id, uploadFile);
             await userStore.loadAvatar();
             message.success(res.detail);
-        } catch (error: any) {
+        } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
         }
     };

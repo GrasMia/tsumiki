@@ -102,7 +102,7 @@
             const res = await userStore.register(formData.username, formData.email, formData.password);
             message.success(res.detail);
             router.push('/login');
-        } catch (error: any) {
+        } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
         } finally {
             loading.value = false;

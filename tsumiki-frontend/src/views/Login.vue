@@ -75,7 +75,7 @@
             live2dAlert('ログイン成功しました');
             message.success('登录成功');
             router.push(`/${formData.value.username}/`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             live2dAlert('ログイン失敗しました')
             message.error(error instanceof Error ? error.message : String(error));
         }

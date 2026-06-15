@@ -1,13 +1,16 @@
-from passlib.context import CryptContext
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+ph = PasswordHasher()
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return ph.hash(password)
 
 
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        ph.verify(hashed_password, plain_password)
+        return True
+    except (VerifyMismatchError, InvalidHashError):
+        return False

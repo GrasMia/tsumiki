@@ -39,7 +39,7 @@ const http = ofetch.create({
             try {
                 await userStore.refreshToken();
             }
-            catch (e) {
+            catch (e: unknown) {
                 userStore.logout();
                 window.location.href = '/login';
                 throw e

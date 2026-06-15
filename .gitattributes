@@ -1,1 +1,2 @@
-* text=auto eol=lf
+# 所有文件默认使用 LF 换行符, UTF-8 编码
+* text=auto eol=lf working-tree-encoding=UTF-8
