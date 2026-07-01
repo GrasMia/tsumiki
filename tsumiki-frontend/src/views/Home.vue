@@ -222,6 +222,9 @@
         } catch (e: unknown) {
             dataList.value = [];
             message.error(e instanceof Error ? e.message : String(e));
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            router.back(); // 回退到上级目录
         }
     };
 

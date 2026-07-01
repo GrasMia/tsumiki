@@ -102,6 +102,8 @@ async def create(
         return {"detail": f"路径 {new_dir_name} 创建成功"}
 
     # 上传的是文件
+    if str(current_user_id) == dir_path:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "根目录不允许上传文件")
     elif file_metadata and not new_dir_name:
         file_metadata.name = validate_file_name(file_metadata.name)
         if file_metadata.size > 200 * 1024 * 1024:
