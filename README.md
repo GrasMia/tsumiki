@@ -1,6 +1,6 @@
 # tsumiki v0.1.0
 
-> A solo full-stack practice project
+> A solo full-stack cloud storage practice project
 
 ## Project Structure
 

@@ -2,6 +2,19 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { userApi, type UserProfile } from '@/api/user';
 
+const isTokenValid = (token: string) => {
+    if (!token) return false;
+
+    try {
+        const parts = token.split('.');
+        if (parts[1] === undefined) return false;  // 检查 JWT 格式
+        const payload = JSON.parse(atob(parts[1]));
+        return payload.exp - 5 > Date.now() / 1000;
+    } catch {
+        return false;
+    }
+};
+
 const useUserStore = defineStore('user', () => {
     const user_id = ref(localStorage.getItem('user_id') || '');
     const token = ref(localStorage.getItem('access_token') || '');
@@ -89,4 +102,4 @@ const useUserStore = defineStore('user', () => {
     };
 });
 
-export { useUserStore, userApi };
+export { userApi, isTokenValid, useUserStore };

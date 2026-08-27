@@ -146,7 +146,7 @@
 <script setup lang="ts">
     import { ref, useTemplateRef, computed, watch, onMounted } from 'vue';
     import { useRoute, useRouter } from 'vue-router';
-    import { useUserStore } from '@/stores/user';
+    import { isTokenValid, useUserStore } from '@/stores/user';
     import { useUploadStore } from '@/stores/upload';
     import { useListCacheStore } from '@/stores/listCache';
     import { type ChunkMetadata, type DataItem, type FileInfo, Status, diskApi } from '@/api/disk';
@@ -376,14 +376,18 @@
         }
     };
 
-    const handleDownload = (fileName: string) => {
-        diskApi.downloadFile(userStore.user_id, currentPath.value, fileName, userStore.token)
+    const handleDownload = async (fileName: string) => {
+        if (!isTokenValid(userStore.token)) {
+            await userStore.refreshToken();
+        }
+
+        diskApi.downloadFile(userStore.user_id, currentPath.value, fileName, userStore.token);
     };
     const throttledHandleDownload = throttle(handleDownload, 200);
 
-    const downloadSelectedFile = () => {
+    const downloadSelectedFile = async () => {
         if (selectedFileRow.value) {
-            throttledHandleDownload(selectedFileRow.value.name);
+            await throttledHandleDownload(selectedFileRow.value.name);
             showFileDetail.value = false;
         }
     };

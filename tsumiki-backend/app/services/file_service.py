@@ -149,3 +149,6 @@ class FileService:
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"重命名失败: {e.args}")
 
         await db.commit()
+
+    @staticmethod
+    async def move_file(db: AsyncSession): ...

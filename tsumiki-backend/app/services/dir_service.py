@@ -8,7 +8,6 @@ from .file_service import FileService
 
 
 class DirService:
-
     @staticmethod
     async def create_dir(current_dir: Dir, dir_name: str, db: AsyncSession):
         existing_dir = await db.scalar(select(Dir).where(Dir.path == (current_dir.path + dir_name + "/")))
@@ -78,6 +77,9 @@ class DirService:
         rename_dir.name = new_name
 
         await db.commit()
+
+    @staticmethod
+    async def move_dir(db: AsyncSession): ...
 
     @staticmethod
     async def _get_all_subdir_id(delete_dir_id: int, db: AsyncSession) -> list[int]:

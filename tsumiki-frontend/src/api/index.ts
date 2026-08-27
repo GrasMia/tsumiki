@@ -1,18 +1,5 @@
 import { ofetch, $fetch } from 'ofetch';
-import { useUserStore } from "@/stores/user"
-
-export const isTokenValid = (token: string) => {
-    if (!token) return false;
-
-    try {
-        const parts = token.split('.');
-        if (parts[1] === undefined) return false;  // 检查 JWT 格式
-        const payload = JSON.parse(atob(parts[1]));
-        return payload.exp - 5 > Date.now() / 1000;
-    } catch {
-        return false;
-    }
-};
+import { isTokenValid, useUserStore } from "@/stores/user"
 
 // 创建 ofetch 实例
 const http = ofetch.create({
