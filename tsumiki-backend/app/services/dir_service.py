@@ -1,8 +1,10 @@
+from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, func, select, insert, update
 
 from app.models import File, Dir
-from app.exceptions import DIR_ALREADY_EXISTS
+from app.exceptions import DIR_NOT_FOUND, DIR_ALREADY_EXISTS
 
 from .file_service import FileService
 
@@ -79,12 +81,41 @@ class DirService:
         await db.commit()
 
     @staticmethod
-    async def move_dir(db: AsyncSession): ...
+    async def move_dir(target_dir: Dir, original_dir: Dir, dir_name: str, db: AsyncSession):
+        try:
+            stmt = select(Dir).where(Dir.parent_id == original_dir.id, Dir.name == dir_name).with_for_update()
+            move_dir = await db.scalar(stmt)
+
+            if not move_dir:
+                raise DIR_NOT_FOUND
+
+            if target_dir.path.startswith(move_dir.path):
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "目标目录不能处于原目录的子目录")
+
+            dirs_id = await DirService._get_all_subdir_id(move_dir.id, db)
+            dirs_id.append(move_dir.id)
+
+            old_path = move_dir.path
+            new_path = f"{target_dir.path}{dir_name}/"
+
+            for dir_id in dirs_id:
+                stmt = update(Dir).where(Dir.id == dir_id).values(path=func.regexp_replace(Dir.path, old_path, new_path))
+                await db.execute(stmt)
+
+            move_dir.parent_id = target_dir.id
+        except HTTPException:
+            raise
+        except IntegrityError:
+            raise DIR_ALREADY_EXISTS
+        except Exception as e:
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"移动失败: {e}")
+
+        await db.commit()
 
     @staticmethod
-    async def _get_all_subdir_id(delete_dir_id: int, db: AsyncSession) -> list[int]:
+    async def _get_all_subdir_id(dir_id: int, db: AsyncSession) -> list[int]:
         subdirs_id: list[int] = []
-        queue = [delete_dir_id]
+        queue = [dir_id]
 
         while queue:
             current_id = queue.pop()

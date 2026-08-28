@@ -6,7 +6,7 @@
 <script setup lang="ts">
     import { h, computed, ref, nextTick } from 'vue';
     import { NButton, NSpace, NIcon, NDataTable, NInput, type DataTableColumns } from 'naive-ui';
-    import { DownloadOutline, TrashOutline, CreateOutline } from '@vicons/ionicons5';
+    import { DownloadOutline, TrashOutline, CreateOutline,MoveOutline } from '@vicons/ionicons5';
     import type { DataItem } from '@/api/disk';
     import { formatStorage } from '@/utils/format';
 
@@ -22,6 +22,7 @@
         (e: 'delete', row: DataItem): void;
         (e: 'downloadFile', fileName: string): void;
         (e: 'rowDblclick', row: DataItem): void;
+        (e: 'move', row: DataItem): void;
     }>();
 
     // 正在编辑的行
@@ -130,52 +131,50 @@
         {
             title: '操作',
             key: 'actions',
-            width: 165,
+            width: 230,
             align: 'center',
             render(row) {
                 const isDir = row.size === undefined;
                 const isEditing = editingRow.value === row;
 
                 if (isEditing) {
-                    return null; // 编辑时隐藏操作按钮
+                    return null;
                 }
 
-                if (isDir) {
-                    return h(NSpace, { justify: "end" }, {
-                        default: () => [
-                            h(NButton, {
-                                size: 'small',
-                                quaternary: true,
-                                onClick: () => startRename(row),
-                            }, { icon: () => h(NIcon, null, { default: () => h(CreateOutline) }) }),
-                            h(NButton, {
-                                size: 'small',
-                                quaternary: true,
-                                type: 'error',
-                                onClick: () => emit('delete', row),
-                            }, { icon: () => h(NIcon, null, { default: () => h(TrashOutline) }) }),
-                        ]
-                    });
-                }
+                // 所有按钮
+                const buttons = [
+                    // 下载按钮（仅文件）
+                    ...(isDir ? [] : [h(NButton, {
+                        size: 'small',
+                        quaternary: true,
+                        onClick: () => emit('downloadFile', row.name),
+                    }, { icon: () => h(NIcon, null, { default: () => h(DownloadOutline) }) })]),
+
+                    // 重命名按钮
+                    h(NButton, {
+                        size: 'small',
+                        quaternary: true,
+                        onClick: () => startRename(row),
+                    }, { icon: () => h(NIcon, null, { default: () => h(CreateOutline) }) }),
+
+                    // 移动按钮
+                    h(NButton, {
+                        size: 'small',
+                        quaternary: true,
+                        onClick: () => emit('move', row),
+                    }, { icon: () => h(NIcon, null, { default: () => h(MoveOutline) }) }),
+
+                    // 删除按钮
+                    h(NButton, {
+                        size: 'small',
+                        quaternary: true,
+                        type: 'error',
+                        onClick: () => emit('delete', row),
+                    }, { icon: () => h(NIcon, null, { default: () => h(TrashOutline) }) }),
+                ];
+
                 return h(NSpace, { justify: 'end' }, {
-                    default: () => [
-                        h(NButton, {
-                            size: 'small',
-                            quaternary: true,
-                            onClick: () => emit('downloadFile', row.name),
-                        }, { icon: () => h(NIcon, null, { default: () => h(DownloadOutline) }) }),
-                        h(NButton, {
-                            size: 'small',
-                            quaternary: true,
-                            onClick: () => startRename(row),
-                        }, { icon: () => h(NIcon, null, { default: () => h(CreateOutline) }) }),
-                        h(NButton, {
-                            size: 'small',
-                            quaternary: true,
-                            type: 'error',
-                            onClick: () => emit('delete', row),
-                        }, { icon: () => h(NIcon, null, { default: () => h(TrashOutline) }) })
-                    ]
+                    default: () => buttons
                 });
             }
         }

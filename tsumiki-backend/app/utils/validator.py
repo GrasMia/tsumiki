@@ -35,7 +35,7 @@ WINDOWS_RESERVED_NAMES = {
 SERVER_RESERVED_NAMES = {"profile"}
 
 # 服务器保留用户名（仅用户名禁止）
-SERVER_RESERVED_USERNAMES = {"auth", "users", "disk", "login", "register", "root"}
+SERVER_RESERVED_USERNAMES = {"admin", "root"}
 
 
 MIN_USERNAME_LENGTH = 5
@@ -105,13 +105,13 @@ def validate_password(password: str) -> str:
     return password
 
 
-def _validate_path_item(name: str, name_type: str, max_len: int, allow_dot_start: bool = False) -> str:
+def _validate_item(name: str, name_type: str, max_len: int) -> str:
     name = _base_validation(name, name_type, max_len=max_len, allow_slash=False)
 
     if re.match(r"^\.+$", name):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能全为 '.'")
 
-    if not allow_dot_start and name.startswith("."):
+    if name.startswith("."):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能以 '.' 开头")
 
     if name.endswith("."):
@@ -124,27 +124,30 @@ def _validate_path_item(name: str, name_type: str, max_len: int, allow_dot_start
 
 
 def validate_dir_name(dir_name: str) -> str:
-    return _validate_path_item(dir_name, "目录名", max_len=MAX_DFNAME_LENGTH, allow_dot_start=False)
+    return _validate_item(dir_name, "目录名", max_len=MAX_DFNAME_LENGTH)
 
 
 def validate_file_name(file_name: str) -> str:
-    return _validate_path_item(file_name, "文件名", max_len=MAX_DFNAME_LENGTH, allow_dot_start=False)
+    return _validate_item(file_name, "文件名", max_len=MAX_DFNAME_LENGTH)
 
 
 def validate_file_name_allow_hidden(file_name: str) -> str:
-    return _validate_path_item(file_name, "文件名", max_len=MAX_DFNAME_LENGTH, allow_dot_start=True)
+    return _validate_item(file_name, "文件名", max_len=MAX_DFNAME_LENGTH)
 
 
 def validate_dir_path(dir_path: str) -> str:
     if not dir_path or not dir_path.strip():
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "目录路径不能为空")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "路径不能为空")
 
     if "\\" in dir_path:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "目录路径不能包含 '\\' 字符")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "路径不能包含 '\\' 字符")
+
+    if len(dir_path) > MAX_DIR_PATH_LENGTH:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"路径长度不能超过 {MAX_DIR_PATH_LENGTH} 位")
 
     parts = dir_path.split("/")
     for part in parts:
         if part:
-            _validate_path_item(part, "目录路径", max_len=MAX_DIR_PATH_LENGTH, allow_dot_start=False)
+            _validate_item(part, "目录名", max_len=MAX_DFNAME_LENGTH)
 
     return dir_path

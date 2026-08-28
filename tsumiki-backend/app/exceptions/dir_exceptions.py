@@ -7,5 +7,5 @@ DIR_NOT_FOUND = HTTPException(
 
 DIR_ALREADY_EXISTS = HTTPException(
     status_code=status.HTTP_403_FORBIDDEN,
-    detail="当前目录下已存在同名目录",
+    detail="该目录下已存在同名目录",
 )

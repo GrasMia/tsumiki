@@ -140,9 +140,7 @@ class FileService:
                 .values(name=new_name)
                 .returning(File)
             )
-            renamed_file = await db.scalar(stmt)
-            if not renamed_file:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "重命名失败: 文件不存在")
+            await db.scalar(stmt)
         except IntegrityError:
             raise FILE_ALREADY_EXISTS
         except Exception as e:
@@ -151,4 +149,18 @@ class FileService:
         await db.commit()
 
     @staticmethod
-    async def move_file(db: AsyncSession): ...
+    async def move_file(target_dir: Dir, original_dir: Dir, file_name: str, db: AsyncSession):
+        try:
+            stmt = (
+                update(File)
+                .where(File.dir_id == original_dir.id, File.name == file_name)
+                .values(dir_id=target_dir.id)
+                .returning(File)
+            )
+            await db.scalar(stmt)
+        except IntegrityError:
+            raise FILE_ALREADY_EXISTS
+        except Exception as e:
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"移动失败: {e.args}")
+
+        await db.commit()

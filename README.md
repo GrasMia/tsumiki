@@ -34,8 +34,7 @@
 | State Management              | Pinia                                                                       |
 | Routing                       | Vue Router                                                                  |
 | Language                      | TypeScript                                                                  |
-| UI Components                 | Naive UI                                                                    |
-| Icons                         | vicons                                                                      |
+| UI Components + Icons         | Naive UI + vicons/ionicons5                                                 |
 | Live2D                        | live2d‑widget.js by [@xiazeyu](https://github.com/xiazeyu)                  |
 | Live2D Model                  | tsumiki                                                                     |
 

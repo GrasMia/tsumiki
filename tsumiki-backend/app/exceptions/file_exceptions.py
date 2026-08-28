@@ -7,7 +7,7 @@ FILE_NOT_FOUND = HTTPException(
 
 FILE_ALREADY_EXISTS = HTTPException(
     status_code=status.HTTP_409_CONFLICT,
-    detail="当前目录下已存在同名文件",
+    detail="该目录下已存在同名文件",
 )
 
 INVALID_FILE_NAME = HTTPException(

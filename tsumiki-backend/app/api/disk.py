@@ -213,3 +213,60 @@ async def rename(
 
     else:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "重命名失败: 存在缺失或多余的参数")
+
+
+@router.put("/")
+async def move(
+    target_dir_path: str = Query(...),
+    original_dir_path: str = Query(...),
+    dir_name: str | None = Query(default=None),
+    file_name: str | None = Query(default=None),
+    current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_async),
+):
+    target_dir_path = validate_dir_path(target_dir_path)
+    original_dir_path = validate_dir_path(original_dir_path)
+
+    if dir_name and not file_name:
+        dir_name = validate_dir_name(dir_name)
+
+        target_dir = await db.scalar(select(Dir).where(Dir.path == (f"/{target_dir_path}/")).with_for_update())
+        original_dir = await db.scalar(select(Dir).where(Dir.path == (f"/{original_dir_path}/")).with_for_update())
+
+        if not target_dir:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"目标{DIR_NOT_FOUND.detail}")
+        if not original_dir:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"原{DIR_NOT_FOUND.detail}")
+        if not (target_dir.user_id == original_dir.user_id == current_user_id):
+            raise USER_INCONSISTENT
+
+        if target_dir.id == original_dir.id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="目标目录不能与原目录相同")
+
+        await DirService.move_dir(target_dir, original_dir, dir_name, db)
+        res = f" {target_dir.name} " if f"/{current_user_id}/" != target_dir.path else "根目录"
+        return {"detail": f"目录 {dir_name} 已移动至{res}下"}
+
+    elif file_name and not dir_name:
+        file_name = validate_file_name(file_name)
+
+        target_dir = await db.scalar(select(Dir).where(Dir.path == (f"/{target_dir_path}/")).with_for_update())
+        original_dir = await db.scalar(select(Dir).where(Dir.path == (f"/{original_dir_path}/")).with_for_update())
+
+        if not target_dir:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"目标{DIR_NOT_FOUND.detail}")
+        if not original_dir:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"原{DIR_NOT_FOUND.detail}")
+        if not (target_dir.user_id == original_dir.user_id == current_user_id):
+            raise USER_INCONSISTENT
+
+        if target_dir.id == original_dir.id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="目标目录不能与原目录相同")
+        if f"/{current_user_id}/" == target_dir.path:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "不允许将文件移动至根目录")
+
+        await FileService.move_file(target_dir, original_dir, file_name, db)
+        return {"detail": f"文件 {dir_name} 已移动至 {target_dir.name} 目录下"}
+
+    else:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "移动失败: 存在缺失或多余的参数")

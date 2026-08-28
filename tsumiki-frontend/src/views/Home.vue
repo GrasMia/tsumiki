@@ -81,7 +81,8 @@
             <div class="table-container">
                 <file-table :data="filteredFileList" :loading="loading" :row-key="(row: DataItem) => row.name"
                     :bordered="true" :striped="true" @rename="handleRename" @enter-dir="enterDir"
-                    @download-file="throttledHandleDownload" @delete="handleDelete" @row-dblclick="handleRowDblclick" />
+                    @download-file="throttledHandleDownload" @delete="handleDelete" @move=""
+                    @row-dblclick="handleRowDblclick" />
             </div>
 
             <!-- 新建目录对话框 -->
@@ -153,7 +154,7 @@
     import { useMessage, useDialog, NButton, NSpace, NInput, NIcon, NLayout, NLayoutHeader, NLayoutContent } from 'naive-ui'
     import { NCard, NStatistic, NH2, NText, NAvatar, NDropdown, NBreadcrumb, NBreadcrumbItem, } from 'naive-ui'
     import { NModal, NTag, NUpload, NProgress, NForm, NFormItem, type UploadCustomRequestOptions } from 'naive-ui';
-    import { CloudUploadOutline, RefreshOutline, SearchOutline, ChevronDownOutline, AddOutline } from '@vicons/ionicons5';
+    import { CloudUploadOutline, RefreshOutline, SearchOutline, ChevronDownOutline, AddOutline, MoveOutline } from '@vicons/ionicons5';
     import { live2dAlert } from '@/stores/live2d';
     import FileTable from '@/components/FileTable.vue';
     import { calculateChunkMD5, calculateSHA256, type Chunk } from '@/utils/crypto';
@@ -190,13 +191,11 @@
             return '';
         return Array.isArray(pathMatch) ? pathMatch.join('/') + '/' : pathMatch;
     });
-
     const breadcrumbItems = computed(() => {
         if (!currentPath.value)
             return [];
         return currentPath.value.split('/').filter(p => p);
     });
-
     const fileCount = computed(() => {
         return dataList.value.filter(item => item.size !== undefined).length;
     });
@@ -434,7 +433,7 @@
                         message.success(res.detail);
                     }
                     await userStore.fetchUser();
-                    dataList.value = dataList.value.filter((item) => item.name !== row.name);
+                    dataList.value = dataList.value.filter((item) => !(item.name === row.name && item.size === row.size));
                 } catch (error: unknown) {
                     message.error(error instanceof Error ? error.message : String(error));
                 }
