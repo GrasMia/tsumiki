@@ -12,10 +12,11 @@ from app.utils import validate_password, validate_username
 from app.core.security import verify_password, get_password_hash
 from app.exceptions import EMAIL_ALREADY_EXISTS, USERNAME_ALREADY_EXISTS, USER_NOT_FOUND
 from app.core.dependencies import (
+    get_access_token,
+    get_current_user_id,
     create_access_token,
     create_refresh_token,
     refresh_access_token,
-    get_current_user_id_by_cookie,
 )
 
 router = APIRouter(tags=["authentication"])
@@ -99,16 +100,17 @@ async def logout(response: Response):
     return {"detail": "已注销登录"}
 
 
-@router.post("/refresh", response_model=AuthResponse)
+@router.post("/refresh")
 async def refresh_token(
-    refresh_token: str = Cookie(None),
-    current_user_id: int = Depends(get_current_user_id_by_cookie),
+    refresh_token: str = Cookie(...),
+    access_token: str = Depends(get_access_token),
     db: AsyncSession = Depends(get_db_async_auto),
 ):
+    current_user_id = get_current_user_id(refresh_token)
     current_user = await db.scalar(select(User).where(User.id == current_user_id))
     if not current_user:
         raise USER_NOT_FOUND
 
-    new_access_token = refresh_access_token(refresh_token)
+    access_token = refresh_access_token(str(current_user_id), access_token)
 
-    return AuthResponse(user=UserProfile.model_validate(current_user), access_token=new_access_token)
+    return access_token

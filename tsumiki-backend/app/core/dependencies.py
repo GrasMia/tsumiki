@@ -1,4 +1,4 @@
-from fastapi import Cookie, HTTPException, Query, status
+from fastapi import HTTPException, status
 from fastapi import Security
 from fastapi.security import OAuth2PasswordBearer
 
@@ -6,14 +6,23 @@ from datetime import datetime, timedelta, timezone
 import jwt
 
 from app.config import settings
-from app.exceptions import INVALID_CREDENTIALS
+from app.exceptions import INVALID_CREDENTIALS, USER_INCONSISTENT
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+
+def get_access_token(access_token: str = Security(oauth2_scheme)) -> str:
+    if not access_token:
+        raise INVALID_CREDENTIALS
+
+    return access_token
 
 
 def get_current_user_id(token: str = Security(oauth2_scheme)) -> int:
     if not token:
         raise INVALID_CREDENTIALS
+    if token.startswith(f"{settings.ACCESS_TOKEN_TYPE} "):
+        token = token.replace(f"{settings.ACCESS_TOKEN_TYPE} ", "")
 
     try:
         """jwt.decode() 参数说明：
@@ -35,53 +44,7 @@ def get_current_user_id(token: str = Security(oauth2_scheme)) -> int:
         if not sub:
             raise INVALID_CREDENTIALS
     except jwt.InvalidTokenError:
-        raise INVALID_CREDENTIALS
-    except Exception:
-        raise
-
-    return int(sub)
-
-
-def get_current_user_id_by_query(token: str = Query(None)) -> int:
-    if not token:
-        raise INVALID_CREDENTIALS
-    if token.startswith("Bearer "):
-        token = token.replace("Bearer ", "")
-
-    try:
-        payload = jwt.decode(
-            jwt=token,
-            key=settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
-        )
-        sub: str | None = payload.get("sub")
-        if not sub:
-            raise INVALID_CREDENTIALS
-    except jwt.InvalidTokenError:
-        raise INVALID_CREDENTIALS
-    except Exception:
-        raise
-
-    return int(sub)
-
-
-def get_current_user_id_by_cookie(refresh_token: str = Cookie(None)) -> int:
-    if not refresh_token:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "证书不存在或已过期请重新登录")
-
-    try:
-        payload = jwt.decode(
-            jwt=refresh_token,
-            key=settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
-        )
-        sub: str | None = payload.get("sub")
-        if not sub:
-            raise INVALID_CREDENTIALS
-    except jwt.InvalidTokenError:
-        raise INVALID_CREDENTIALS
-    except Exception:
-        raise
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "token 无效或已过期")
 
     return int(sub)
 
@@ -90,7 +53,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return f"{settings.ACCESS_TOKEN_TYPE} {jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)}"
 
 
 def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> str:
@@ -100,16 +63,18 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> 
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def refresh_access_token(refresh_token: str) -> str:
-    """使用 Refresh Token 生成新的 Access Token"""
+def refresh_access_token(current_user_id: str, access_token: str) -> str:
     try:
-        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str | None = payload.get("sub")
         if user_id is None:
             raise INVALID_CREDENTIALS
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="refresh token 无效或已过期")
-    except Exception as e:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, e.args)
-
-    return create_access_token(data={"sub": user_id})
+        if user_id != current_user_id:
+            raise USER_INCONSISTENT
+        else:
+            return access_token  # 返回未过期的 access_token
+    except jwt.InvalidTokenError as e:
+        if str(e) == "Signature has expired":
+            return create_access_token(data={"sub": current_user_id})  # access_token 已过期 → 返回新的 access_token
+        else:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(e))

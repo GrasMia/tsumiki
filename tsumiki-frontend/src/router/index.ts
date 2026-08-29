@@ -25,14 +25,14 @@ router.beforeEach(async (to, from) => {
     const userStore = useUserStore();
 
     // 未登录
-    if (!userStore.user_id || !userStore.token) {
+    if (!userStore.user_id || !userStore.access_token) {
         if (to.path !== '/login' && to.path !== '/register') {
             return '/login';
         }
     }
 
     // 已登陆
-    if (userStore.user_id && userStore.token) {
+    if (userStore.user_id && userStore.access_token) {
         // 如果用户已登录但 userStore 中没有用户信息，尝试从 localStorage 恢复用户信息
         if (!userStore.user.username) {
             await userStore.fetchUser();

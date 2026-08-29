@@ -1,6 +1,15 @@
 <template>
     <div class="profile-container">
-        <n-card title="个人设置" :bordered="false" class="profile-card">
+        <n-card :bordered="false" class="profile-card">
+            <!-- 自定义标题栏 + 右侧返回按钮 -->
+            <template #header>
+                <div class="card-header">
+                    <span class="card-title">个人设置</span>
+                    <n-button type="success" size="small" quaternary round @click="router.back()">
+                        返回主界面
+                    </n-button>
+                </div>
+            </template>
             <n-tabs type="line" animated>
                 <!-- 基本信息 -->
                 <n-tab-pane name="info" tab="基本信息">
@@ -53,10 +62,14 @@
                             <n-avatar :size="120" :src="userStore.avatarBlobUrl" object-fit="cover" />
                         </div>
                         <n-upload ref="uploadRef" :show-file-list="false" :multiple="false"
-                            :custom-request="customUpload" accept="image/*">
-                            <n-button type="tertiary">
+                            :custom-request="customUpload" accept="image/*" >
+                            <n-button type="primary" style="margin-right: 0.75rem;">
                                 <template #icon><n-icon><cloud-upload-outline /></n-icon></template>
                                 上传头像
+                            </n-button>
+                            <n-button type="tertiary" @click.stop="resetAvatar">
+                                <template #icon><n-icon><cloud-upload-outline /></n-icon></template>
+                                重置头像
                             </n-button>
                         </n-upload>
                     </div>
@@ -213,9 +226,28 @@
             message.error(error instanceof Error ? error.message : String(error));
         }
     };
+
+    // 重置头像
+    const resetAvatar = async () => {
+        try {
+            const res = await userApi.resetAvatar(userStore.user_id);
+            await userStore.loadAvatar();
+            message.success(res.detail);
+        } catch (error: unknown) {
+            message.error(error instanceof Error ? error.message : String(error));
+        }
+    }
 </script>
 
 <style scoped>
+    .card-header {
+        display: flex;
+        /* 两端对齐 */
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+
     .profile-container {
         min-height: 100vh;
         background: linear-gradient(135deg, MediumAquaMarine 0%, LightSteelBlue 100%);

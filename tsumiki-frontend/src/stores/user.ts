@@ -9,7 +9,7 @@ const isTokenValid = (token: string) => {
         const parts = token.split('.');
         if (parts[1] === undefined) return false;  // 检查 JWT 格式
         const payload = JSON.parse(atob(parts[1]));
-        return payload.exp - 5 > Date.now() / 1000;
+        return payload.exp >= Date.now() / 1000;
     } catch {
         return false;
     }
@@ -17,16 +17,16 @@ const isTokenValid = (token: string) => {
 
 const useUserStore = defineStore('user', () => {
     const user_id = ref(localStorage.getItem('user_id') || '');
-    const token = ref(localStorage.getItem('access_token') || '');
+    const access_token = ref(localStorage.getItem('access_token') || '');
     const user = ref<UserProfile>({} as UserProfile);
-    const refreshPromise = ref<Promise<void> | null>(null);
+    const refreshPromise = ref<Promise<string> | null>(null);
     const avatarBlobUrl = ref('');
 
     const login = async (username: string, password: string) => {
         const res = await userApi.login({ username, password });
         user.value = res.user;
         localStorage.setItem('user_id', user_id.value = String(res.user.id));
-        localStorage.setItem('access_token', token.value = `${res.token_type} ${res.access_token}`);
+        localStorage.setItem('access_token', access_token.value = res.access_token);
 
         await loadAvatar();
     };
@@ -37,7 +37,7 @@ const useUserStore = defineStore('user', () => {
 
     const logout = async () => {
         user_id.value = '';
-        token.value = '';
+        access_token.value = '';
         user.value = {} as UserProfile;
         localStorage.removeItem('user_id');
         localStorage.removeItem('access_token');
@@ -47,21 +47,9 @@ const useUserStore = defineStore('user', () => {
         return await userApi.logout();
     };
 
-    const refreshToken = async () => {
+    const refreshToken = () => {
         if (refreshPromise.value) return refreshPromise.value;
-
-        refreshPromise.value = (async () => {
-            const res = await userApi.refresh();
-            user.value = res.user;
-            localStorage.setItem('user_id', user_id.value = String(res.user.id));
-            localStorage.setItem('access_token', token.value = `${res.token_type} ${res.access_token}`);
-        })();
-
-        try {
-            return await refreshPromise.value;
-        } finally {
-            refreshPromise.value = null;
-        }
+        return refreshPromise.value = userApi.refresh();
     };
 
     const loadAvatar = async () => {
@@ -89,7 +77,7 @@ const useUserStore = defineStore('user', () => {
 
     return {
         user_id,
-        token,
+        access_token,
         user,
         refreshPromise,
         avatarBlobUrl,

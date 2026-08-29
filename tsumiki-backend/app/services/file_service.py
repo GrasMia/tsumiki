@@ -144,7 +144,7 @@ class FileService:
         except IntegrityError:
             raise FILE_ALREADY_EXISTS
         except Exception as e:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"重命名失败: {e.args}")
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"重命名失败: {e}")
 
         await db.commit()
 
@@ -161,6 +161,6 @@ class FileService:
         except IntegrityError:
             raise FILE_ALREADY_EXISTS
         except Exception as e:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"移动失败: {e.args}")
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"移动失败: {e}")
 
         await db.commit()

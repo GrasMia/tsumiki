@@ -376,11 +376,15 @@
     };
 
     const handleDownload = async (fileName: string) => {
-        if (!isTokenValid(userStore.token)) {
-            await userStore.refreshToken();
+        if (!isTokenValid(userStore.access_token)) {
+            const access_token = await userStore.refreshToken();
+            if (userStore.refreshPromise != null) {
+                localStorage.setItem('access_token', userStore.access_token = access_token);
+                userStore.refreshPromise = null
+            }
         }
 
-        diskApi.downloadFile(userStore.user_id, currentPath.value, fileName, userStore.token);
+        diskApi.downloadFile(userStore.user_id, currentPath.value, fileName, userStore.access_token);
     };
     const throttledHandleDownload = throttle(handleDownload, 200);
 

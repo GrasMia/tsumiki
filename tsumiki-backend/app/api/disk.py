@@ -8,7 +8,7 @@ from app.db import get_db_async, get_db_async_auto
 from app.models import Dir, Status
 from app.schemas import DirInfo, FileInfo, FileMetadata, ChunkInfo, ChunkMetadata
 from app.services import DirService, FileService, StorageService
-from app.core.dependencies import get_current_user_id, get_current_user_id_by_query
+from app.core.dependencies import get_current_user_id
 from app.exceptions import DIR_NOT_FOUND, USER_INCONSISTENT
 from app.utils import validate_dir_name, validate_dir_path, validate_file_name
 
@@ -47,11 +47,12 @@ async def get_list(
 async def download_file(
     dir_path: str,
     file_name: str,
-    current_user_id: int = Depends(get_current_user_id_by_query),
+    token: str = Query(...),
     db: AsyncSession = Depends(get_db_async),
 ):
     dir_path = validate_dir_path(dir_path)
     file_name = validate_file_name(file_name)
+    current_user_id = get_current_user_id(token)
 
     current_dir = await db.scalar(select(Dir).where(Dir.path == ("/" + dir_path + "/")))
     if not current_dir:
@@ -215,7 +216,7 @@ async def rename(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "重命名失败: 存在缺失或多余的参数")
 
 
-@router.put("/")
+@router.put("")
 async def move(
     target_dir_path: str = Query(...),
     original_dir_path: str = Query(...),

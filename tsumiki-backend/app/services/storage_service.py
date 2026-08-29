@@ -127,10 +127,10 @@ class StorageService:
 
             except asyncio.TimeoutError as e:
                 # 连接断开/任务取消/超时
-                raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, f"上传超时: {e.args}")
+                raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, f"上传超时: {e}")
             except Exception as e:
                 # 其他异常
-                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"上传失败: {e.args}")
+                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"上传失败: {e}")
 
         except:
             storage.status = Status.FAILED

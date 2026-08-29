@@ -17,7 +17,6 @@ AVATAR_PATH.mkdir(exist_ok=True)
 
 
 class UserService:
-
     @staticmethod
     async def upload_avatar(current_user_id: int, upload_file: UploadFile, db: AsyncSession):
         """上传用户头像"""
@@ -49,7 +48,7 @@ class UserService:
             avatar_data = await asyncio.wait_for(upload_file.read(), timeout=30)
             # 验证实际读取大小
             if len(avatar_data) != upload_file.size:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "文件读取不完整")
+                raise Exception("文件读取不完整")
             # 写入文件
             async with aiofiles.open(physical_path, "wb") as f:
                 await f.write(avatar_data)
@@ -60,7 +59,7 @@ class UserService:
         except Exception as e:
             if physical_path.exists():
                 physical_path.unlink()
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"上传失败: {e.args}")
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"上传失败: {e}")
 
         # 保存成功后删除旧头像
         if current_user.avatar:
@@ -78,10 +77,25 @@ class UserService:
         if not avatar:
             root_user = await db.get(User, 0)
             if not root_user:
-                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "根用户不存在")
+                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "root 用户不存在，无法获取默认头像")
             return AVATAR_PATH / f"{root_user.avatar}"
 
         avatar_path = AVATAR_PATH / f"{avatar}"
         if not avatar_path.exists():
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "物理头像丢失")
         return avatar_path
+
+    @staticmethod
+    async def reset_avatar_path(current_user_id: int, db: AsyncSession):
+        current_user = await db.scalar(select(User).where(User.id == current_user_id).with_for_update())
+        if not current_user:
+            raise USER_NOT_FOUND
+        if not current_user.avatar:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "无头像上传记录无法重置")
+
+        physical_path = AVATAR_PATH / current_user.avatar
+        if physical_path.exists():
+            physical_path.unlink()
+
+        current_user.avatar = None
+        await db.commit()

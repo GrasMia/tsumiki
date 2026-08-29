@@ -14,7 +14,6 @@ export interface RegisterParams {
 export interface AuthResponse {
     user: UserProfile
     access_token: string
-    token_type: string
 }
 
 export interface UserProfile {
@@ -54,7 +53,7 @@ export const userApi = {
     },
 
     refresh: () => {
-        return authHttp<AuthResponse>(`/auth/refresh`, { method: 'POST' });
+        return authHttp<string>(`/auth/refresh`, { method: 'POST' });
     },
 
     getUserProfile: (user_id: string) => {
@@ -79,8 +78,12 @@ export const userApi = {
         return http<DetailResponse>(`/users/${user_id}/avatar`, { method: 'PUT', body: formData });
     },
 
-    async getAvatarBlob(user_id: string): Promise<Blob> {
+    getAvatarBlob(user_id: string) {
         return http<Blob>(`/users/${user_id}/avatar`, { method: 'GET' });
+    },
+
+    resetAvatar(user_id: string) {
+        return http<DetailResponse>(`/users/${user_id}/avatar`, { method: 'DELETE' });
     },
 
     inactive: (user_id: string, password: string) => {

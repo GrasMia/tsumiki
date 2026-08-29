@@ -126,13 +126,13 @@ async def modify_avatar(
 
     await UserService.upload_avatar(current_user_id, upload_file, db)
 
-    return {"detail": "头像已更换"}
+    return {"detail": "头像上传成功"}
 
 
 @router.get("/{user_id}/avatar")
 async def get_avatar(
     user_id: int,
-    current_user_id: User = Depends(get_current_user_id),
+    current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async_auto),
 ):
     if user_id != current_user_id:
@@ -144,6 +144,23 @@ async def get_avatar(
     avatar_path = await UserService.get_avatar_path(current_user.avatar, db)
 
     return FileResponse(avatar_path)
+
+
+@router.delete("/{user_id}/avatar")
+async def reset_avatar(
+    user_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_async_auto),
+):
+    if user_id != current_user_id:
+        raise user_exceptions.USER_INCONSISTENT
+    current_user = await db.scalar(select(User).where(User.id == current_user_id))
+    if not current_user:
+        raise user_exceptions.USER_NOT_FOUND
+
+    await UserService.reset_avatar_path(user_id, db)
+
+    return {"detail": "已重置头像"}
 
 
 @router.put("/{user_id}/inactive")

@@ -118,5 +118,17 @@ export const diskApi = {
             `/disk/${user_id}/?file_name=${fileName}&new_name=${newName}`;
 
         return http<DetailResponse>(url, { method: 'PUT' });
-    }
+    },
+
+    moveDir: (target_dir_path: string, original_dir_path: string, dirName: string) => {
+        let url = `/disk?target_dir_path=${target_dir_path}?original_dir_path=${original_dir_path}&dir_name=${dirName}`;
+
+        return http<DetailResponse>(url, { method: 'PUT' });
+    },
+
+    moveFile: (target_dir_path: string, original_dir_path: string, fileName: string) => {
+        let url = `/disk?target_dir_path=${target_dir_path}?original_dir_path=${original_dir_path}&file_name=${fileName}`;
+
+        return http<DetailResponse>(url, { method: 'PUT' });
+    },
 };
