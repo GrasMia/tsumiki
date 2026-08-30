@@ -87,7 +87,7 @@ class DirService:
             move_dir = await db.scalar(stmt)
 
             if not move_dir:
-                raise DIR_NOT_FOUND
+                raise Exception(f"当前目录下不存在目录 {dir_name}")
 
             if target_dir.path.startswith(move_dir.path):
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, "目标目录不能处于原目录的子目录")
@@ -108,7 +108,7 @@ class DirService:
         except IntegrityError:
             raise DIR_ALREADY_EXISTS
         except Exception as e:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"移动失败: {e}")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"移动失败: {e}")
 
         await db.commit()
 

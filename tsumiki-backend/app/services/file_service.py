@@ -140,11 +140,12 @@ class FileService:
                 .values(name=new_name)
                 .returning(File)
             )
-            await db.scalar(stmt)
+            if not await db.scalar(stmt):
+                raise Exception(f"当前目录下不存在文件 {file_name}")
         except IntegrityError:
             raise FILE_ALREADY_EXISTS
         except Exception as e:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"重命名失败: {e}")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"重命名失败: {e}")
 
         await db.commit()
 
@@ -157,10 +158,11 @@ class FileService:
                 .values(dir_id=target_dir.id)
                 .returning(File)
             )
-            await db.scalar(stmt)
+            if not await db.scalar(stmt):
+                raise Exception(f"当前目录下不存在文件 {file_name}")
         except IntegrityError:
             raise FILE_ALREADY_EXISTS
         except Exception as e:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"移动失败: {e}")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"移动失败: {e}")
 
         await db.commit()

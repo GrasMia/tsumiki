@@ -6,12 +6,6 @@ INVALID_CREDENTIALS = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
-USER_UNAUTHORIZED = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="未授权",
-    headers={"WWW-Authenticate": "Bearer"},
-)
-
 USER_ALREADY_EXISTS = HTTPException(
     status_code=status.HTTP_400_BAD_REQUEST,
     detail="用户名或邮箱已存在",

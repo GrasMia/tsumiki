@@ -54,10 +54,6 @@ router.beforeEach(async (to, from) => {
             return `/${userStore.user.username}/profile`;
         }
 
-        if (from.path === to.path && to.path === `/${userStore.user.username}/profile`){
-            return `/${userStore.user.username}/`;
-        }
-
         if (typeof to.params.pathMatch === 'string') {
             if (!to.params.pathMatch.endsWith('/')) {
                 return `/${userStore.user.username}/${to.params.pathMatch}/`;

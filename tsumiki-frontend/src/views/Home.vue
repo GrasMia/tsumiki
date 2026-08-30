@@ -57,7 +57,7 @@
                             上传文件
                         </n-button>
                     </n-upload>
-                    <n-button @click="throttledRefreshFileList" type="tertiary">
+                    <n-button @click="refreshFileList" type="tertiary">
                         <template #icon><n-icon><refresh-outline /></n-icon></template>
                         刷新
                     </n-button>
@@ -80,8 +80,8 @@
             <!-- 文件列表 -->
             <div class="table-container">
                 <file-table :data="filteredFileList" :loading="loading" :row-key="(row: DataItem) => row.name"
-                    :bordered="true" :striped="true" @rename="handleRename" @enter-dir="enterDir"
-                    @download-file="throttledHandleDownload" @delete="handleDelete" @move=""
+                    :bordered="true" :striped="true" @enter-dir="enterDir" @download-file="handleDownload"
+                    @rename="handleRename" @move="handleMove" @delete="handleDelete"
                     @row-dblclick="handleRowDblclick" />
             </div>
 
@@ -140,6 +140,22 @@
                     </n-space>
                 </template>
             </n-modal>
+
+            <!-- 移动文件/目录对话框 -->
+            <n-modal v-model:show="showMoveDialog" preset="dialog" :style="{ width: '25rem' }"
+                :title="`移动${moveItem?.isFile ? '文件' : '目录'} ${moveItem?.name} 至`" draggable>
+                <n-form>
+                    <n-form-item label="目标路径（留空表示根目录）">
+                        <n-input v-model:value="targetPath" @keyup.enter="confirmMove" placeholder=".../.../..." />
+                    </n-form-item>
+                </n-form>
+                <template #action>
+                    <n-space>
+                        <n-button @click="showMoveDialog = false">取消</n-button>
+                        <n-button type="primary" @click="confirmMove" :loading="moveLoading">确定</n-button>
+                    </n-space>
+                </template>
+            </n-modal>
         </n-layout-content>
     </n-layout>
 </template>
@@ -154,7 +170,7 @@
     import { useMessage, useDialog, NButton, NSpace, NInput, NIcon, NLayout, NLayoutHeader, NLayoutContent } from 'naive-ui'
     import { NCard, NStatistic, NH2, NText, NAvatar, NDropdown, NBreadcrumb, NBreadcrumbItem, } from 'naive-ui'
     import { NModal, NTag, NUpload, NProgress, NForm, NFormItem, type UploadCustomRequestOptions } from 'naive-ui';
-    import { CloudUploadOutline, RefreshOutline, SearchOutline, ChevronDownOutline, AddOutline, MoveOutline } from '@vicons/ionicons5';
+    import { CloudUploadOutline, RefreshOutline, SearchOutline, ChevronDownOutline, AddOutline } from '@vicons/ionicons5';
     import { live2dAlert } from '@/stores/live2d';
     import FileTable from '@/components/FileTable.vue';
     import { calculateChunkMD5, calculateSHA256, type Chunk } from '@/utils/crypto';
@@ -184,6 +200,12 @@
     const selectedFile = ref<FileInfo | null>(null);
     const selectedFileRow = ref<DataItem | null>(null);
 
+    // 移动对话框
+    const showMoveDialog = ref(false);
+    const moveLoading = ref(false);
+    const targetPath = ref('');
+    const moveItem = ref({ isFile: Boolean(), name: String() });
+
     // 计算属性
     const currentPath = computed(() => {
         const pathMatch = route.params.pathMatch;
@@ -211,9 +233,7 @@
         return dataList.value.filter(item => item.name.toLowerCase().includes(keyword));
     });
 
-    const userMenuOptions = [
-        { label: '个人设置', key: 'profile' }, { label: '退出登录', key: 'logout' }
-    ];
+    const userMenuOptions = [{ label: '个人设置', key: 'profile' }, { label: '退出登录', key: 'logout' }];
 
     const loadDirectory = async (path: string) => {
         try {
@@ -227,20 +247,16 @@
         }
     };
 
-    const refreshFileList = async () => {
-        await loadDirectory(currentPath.value);
-        message.success('刷新成功');
-    };
-    const throttledRefreshFileList = throttle(refreshFileList, 1500);
+    const navigateTo = (target_path: string) => {
+        const path = currentPath.value.endsWith("/") ? currentPath.value.slice(0, -1) : currentPath.value;
 
-    const navigateTo = (path: string) => {
-        if (path) router.push(`/${userStore.user.username}/${path}`);
+        if (target_path === path) {
+            copyCurrentPath(path);
+            return;
+        }
+
+        if (target_path) router.push(`/${userStore.user.username}/${target_path}`);
         else router.push(`/${userStore.user.username}/`);
-    };
-
-    const enterDir = (dirName: string) => {
-        const newPath = currentPath.value ? `${currentPath.value}${dirName}` : dirName;
-        router.push(`/${userStore.user.username}/${newPath}`);
     };
 
     // 新建目录
@@ -265,7 +281,6 @@
     };
 
     const chunkSize = parseInt(import.meta.env.VITE_UPLOAD_FILE_CHUNK_SIZE) * 1024 * 1024;
-
     // 文件上传
     const customUpload = async ({ file }: UploadCustomRequestOptions) => {
         // 清除文件列表
@@ -366,7 +381,19 @@
         }
     };
 
-    // 文件操作
+    // 刷新列表
+    const refreshFileList = throttle(async () => {
+        await loadDirectory(currentPath.value);
+        message.success('刷新成功');
+    }, 1500);
+
+    // 进入目录
+    const enterDir = (dirName: string) => {
+        const newPath = currentPath.value ? `${currentPath.value}${dirName}` : dirName;
+        router.push(`/${userStore.user.username}/${newPath}`);
+    };
+
+    // 文件详情
     const getFileDetail = async (row: DataItem) => {
         if (row.size && row.sha256) {
             selectedFile.value = { ...row } as FileInfo;
@@ -375,7 +402,15 @@
         }
     };
 
-    const handleDownload = async (fileName: string) => {
+    const handleRowDblclick = (row: DataItem) => {
+        if (row.size)
+            getFileDetail(row);
+        else
+            enterDir(row.name)
+    };
+
+    // 文件下载
+    const handleDownload = throttle(async (fileName: string) => {
         if (!isTokenValid(userStore.access_token)) {
             const access_token = await userStore.refreshToken();
             if (userStore.refreshPromise != null) {
@@ -385,16 +420,16 @@
         }
 
         diskApi.downloadFile(userStore.user_id, currentPath.value, fileName, userStore.access_token);
-    };
-    const throttledHandleDownload = throttle(handleDownload, 200);
+    }, 200);
 
     const downloadSelectedFile = async () => {
         if (selectedFileRow.value) {
-            await throttledHandleDownload(selectedFileRow.value.name);
+            await handleDownload(selectedFileRow.value.name);
             showFileDetail.value = false;
         }
     };
 
+    // 文件重命名
     const handleRename = async (row: DataItem, newName: string) => {
         const oldName = row.name;
         row.name = newName;
@@ -413,11 +448,57 @@
         }
     };
 
-    const handleRowDblclick = (row: DataItem) => {
-        if (row.size)
-            getFileDetail(row);
-        else
-            enterDir(row.name)
+    // 复制剪切板
+    const copyCurrentPath = async (path: string) => {
+        if (!currentPath.value) return;
+
+        try {
+            await navigator.clipboard.writeText(path);
+            message.success('已复制路径：' + path);
+        } catch {
+            // 降级方案
+            const textarea = document.createElement('textarea');
+            textarea.value = path;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            message.success('已复制路径：' + path);
+        }
+    };
+
+    // 打开移动对话框
+    const handleMove = (row: DataItem) => {
+        targetPath.value = '';
+        showMoveDialog.value = true;
+        moveItem.value = {
+            isFile: Boolean(row.size),
+            name: row.name
+        }
+    };
+
+    // 执行移动
+    const confirmMove = async () => {
+        moveLoading.value = true;
+        let target_path = `${userStore.user_id}/${targetPath.value}`
+        let original_path = `${userStore.user_id}/${currentPath.value}`
+        target_path = encodeURIComponent(target_path.endsWith("/") ? target_path.slice(0, -1) : target_path)
+        original_path = encodeURIComponent(original_path.endsWith("/") ? original_path.slice(0, -1) : original_path)
+
+        try {
+            const res = moveItem.value?.isFile
+                ? await diskApi.moveFile(target_path, original_path, moveItem.value.name)
+                : await diskApi.moveDir(target_path, original_path, moveItem.value.name);
+
+            listCacheStore.clearCache();
+            await loadDirectory(currentPath.value);
+            message.success(res.detail);
+            showMoveDialog.value = false;
+        } catch (error: unknown) {
+            message.error(error instanceof Error ? error.message : String(error));
+        } finally {
+            moveLoading.value = false;
+        }
     };
 
     const handleDelete = (row: DataItem) => {
@@ -451,7 +532,6 @@
         router.push('/login');
         message.success(res.detail);
     }
-    const throttledLogout = throttle(handleLogoutPositiveClick, 500);
 
     const handleUserMenuSelect = (key: string) => {
         if (key === 'logout') {
@@ -464,7 +544,7 @@
                 negativeText: '取消',
                 blockScroll: true,
                 closeOnEsc: true,
-                onPositiveClick: throttledLogout
+                onPositiveClick: throttle(handleLogoutPositiveClick, 500)
             });
         }
         if (key === 'profile') {

@@ -1,14 +1,18 @@
-# tsumiki v0.1.0
+# tsumiki
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.141.1-009688)](https://fastapi.tiangolo.com/)
+[![Vue](https://img.shields.io/badge/Vue-3.5.32-4FC08D)](https://vuejs.org/)
 
 > A solo full-stack cloud storage practice project
 
 ## Project Structure
 
-├── tsumiki-backend/ # FastAPI – the brain behind the curtain
-
-└── tsumiki-frontend/ # Vue 3 – the face you see
-
----
+```
+tsumiki/
+    ├── tsumiki-backend/   # FastAPI – the brain behind the curtain
+    └── tsumiki-frontend/  # Vue 3 – the face you see
+```
 
 ## Backend Stack
 
@@ -72,5 +76,6 @@ Thanks [Naive UI](https://www.naiveui.com/) – for the clean and powerful Vue 3
 
 > Thanks to [UNPKG](https://unpkg.com/) for providing public CDN service.
 
+## License
 
-
+MIT © [GrasMia](https://github.com/GrasMia)

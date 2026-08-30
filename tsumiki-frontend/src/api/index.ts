@@ -8,23 +8,21 @@ const http = ofetch.create({
     // 请求拦截器：添加 Token
     async onRequest({ request, options, response }) {
         const userStore = useUserStore();
-        // access_token 未过期
-        if (isTokenValid(userStore.access_token)) {
-            options.headers.append("Authorization", userStore.access_token);
-            return;
-        }
+
         // access_token 不存在或已过期
-        try {
-            const access_token = await userStore.refreshToken();
-            if (userStore.refreshPromise != null) {
-                localStorage.setItem('access_token', userStore.access_token = access_token);
-                userStore.refreshPromise = null
+        if (!isTokenValid(userStore.access_token)) {
+            try {
+                const access_token = await userStore.refreshToken();
+                if (userStore.refreshPromise != null) {
+                    localStorage.setItem('access_token', userStore.access_token = access_token);
+                    userStore.refreshPromise = null
+                }
             }
-        }
-        catch (e: unknown) {
-            userStore.logout();
-            window.location.href = '/login';
-            throw e
+            catch (e: unknown) {
+                userStore.logout();
+                window.location.href = '/login';
+                throw e
+            }
         }
 
         options.headers.append("Authorization", userStore.access_token);
@@ -53,7 +51,6 @@ const authHttp = ofetch.create({
 
     async onRequest({ request, options, response }) {
         const userStore = useUserStore();
-
         if (userStore.access_token) {
             options.headers.append("Authorization", userStore.access_token);
         }

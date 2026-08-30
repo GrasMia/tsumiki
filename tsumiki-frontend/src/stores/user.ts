@@ -9,7 +9,7 @@ const isTokenValid = (token: string) => {
         const parts = token.split('.');
         if (parts[1] === undefined) return false;  // 检查 JWT 格式
         const payload = JSON.parse(atob(parts[1]));
-        return payload.exp >= Date.now() / 1000;
+        return payload.exp > Math.ceil(Date.now() / 1000);
     } catch {
         return false;
     }
