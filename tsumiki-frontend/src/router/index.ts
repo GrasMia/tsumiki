@@ -40,7 +40,7 @@ router.beforeEach(async (to, from) => {
         }
 
         // 当直接访问 http(s)://host:port 时 to.path 和 from.path 均是 /    →    即默认访问URL是 http(s)://host:port/
-        if (to.path === '/') {
+        if (to.path === '/' || to.path === `/${userStore.user.username}`) {
             return `/${userStore.user.username}/`;
         }
 

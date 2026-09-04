@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, func, select, insert, update
 
 from app.models import File, Dir
-from app.exceptions import DIR_NOT_FOUND, DIR_ALREADY_EXISTS
+from app.exceptions import DIR_ALREADY_EXISTS
 
 from .file_service import FileService
 

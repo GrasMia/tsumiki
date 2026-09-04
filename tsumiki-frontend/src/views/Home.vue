@@ -243,7 +243,14 @@
             message.error(e instanceof Error ? e.message : String(e));
 
             await new Promise(resolve => setTimeout(resolve, 1500));
-            router.back(); // 回退到上级目录
+
+            if (listCacheStore.itemsCache.length > 0) {
+                listCacheStore.itemsCache.pop();
+                router.back(); // 回退到之前的目录
+            }
+            else {
+                router.push(`/`); // 回退到根目录
+            }
         }
     };
 
@@ -448,23 +455,30 @@
         }
     };
 
-    // 复制剪切板
-    const copyCurrentPath = async (path: string) => {
-        if (!currentPath.value) return;
+    // 复制剪切板（惰性函数）
+    let copyCurrentPath = async (path: string) => {
+        if (navigator.clipboard) {
+            copyCurrentPath = async (path: string) => {
+                if (!currentPath.value) return;
 
-        try {
-            await navigator.clipboard.writeText(path);
-            message.success('已复制路径：' + path);
-        } catch {
-            // 降级方案
-            const textarea = document.createElement('textarea');
-            textarea.value = path;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            message.success('已复制路径：' + path);
+                await navigator.clipboard.writeText(path);
+                message.success('已复制路径：' + path);
+            }
+        } else {
+            copyCurrentPath = async (path: string) => {
+                if (!currentPath.value) return;
+
+                // 降级方案
+                const textarea = document.createElement('textarea');
+                textarea.value = path;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                message.success('已复制路径：' + path);
+            }
         }
+        copyCurrentPath(path);
     };
 
     // 打开移动对话框

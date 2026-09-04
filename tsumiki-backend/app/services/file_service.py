@@ -13,7 +13,7 @@ from app.config import settings
 
 # 存储配置
 STORAGE_PATH = Path(settings.LOCAL_STORAGE_PATH)  # 物理文件存储根目录
-STORAGE_PATH.mkdir(exist_ok=True)  # 确保目录存在
+STORAGE_PATH.mkdir(parents=True, exist_ok=True)  # 确保目录存在
 
 
 class FileService:

@@ -35,7 +35,7 @@ WINDOWS_RESERVED_NAMES = {
 SERVER_RESERVED_NAMES = {"profile"}
 
 # 服务器保留用户名（仅用户名禁止）
-SERVER_RESERVED_USERNAMES = {"admin", "root"}
+SERVER_RESERVED_USERNAMES = {"auth", "users", "disk", "static", "public", "admin", "root"}
 
 
 MIN_USERNAME_LENGTH = 5
@@ -46,7 +46,7 @@ MAX_PASSWORD_LENGTH = 50
 MAX_DIR_PATH_LENGTH = 255
 
 
-def _base_validation(name: str, name_type: str, max_len: int, allow_slash: bool = False) -> str:
+def _base_validation(name: str, name_type: str, max_len: int) -> str:
     """基础校验（通用）"""
     if not name or not name.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能为空")
@@ -60,11 +60,8 @@ def _base_validation(name: str, name_type: str, max_len: int, allow_slash: bool 
     if len(name) > max_len:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能超过 {max_len} 个字符")
 
-    if not allow_slash and ("/" in name or "\\" in name):
+    if "/" in name or "\\" in name:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能包含 '/' 或 '\\' 字符")
-
-    if "\\" in name:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能包含 '\\' 字符")
 
     if FORBIDDEN_PATTERN.search(name):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}包含非法字符")
@@ -76,7 +73,7 @@ def _base_validation(name: str, name_type: str, max_len: int, allow_slash: bool 
 
 
 def validate_username(username: str) -> str:
-    name = _base_validation(username, "用户名", max_len=MAX_USERNAME_LENGTH, allow_slash=False)
+    name = _base_validation(username, "用户名", max_len=MAX_USERNAME_LENGTH)
 
     if len(username) < MIN_USERNAME_LENGTH:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"用户名不能少于 {MIN_USERNAME_LENGTH} 个字符")
@@ -106,13 +103,14 @@ def validate_password(password: str) -> str:
 
 
 def _validate_item(name: str, name_type: str, max_len: int) -> str:
-    name = _base_validation(name, name_type, max_len=max_len, allow_slash=False)
+    name = _base_validation(name, name_type, max_len=max_len)
 
-    if re.match(r"^\.+$", name):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能全为 '.'")
+    # 禁止连续点号、允许以点号开头、禁止以点号结尾
+    if re.search(r"\.{2,}", name):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能包含连续的点号")
 
-    if name.startswith("."):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能以 '.' 开头")
+    # if name.startswith("."):
+    #     raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能以 '.' 开头")
 
     if name.endswith("."):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能以 '.' 结尾")
