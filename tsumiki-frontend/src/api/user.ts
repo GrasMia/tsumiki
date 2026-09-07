@@ -20,7 +20,6 @@ export interface UserProfile {
     id: number
     username: string
     email: string
-    is_superuser: boolean
     total_space: number
     used_space: number
     created_at: string

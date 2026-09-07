@@ -110,7 +110,7 @@ class FileService:
         stmt = delete(File).where(File.dir_id == current_dir.id, File.name == file_name).returning(File)
         deleted_file = await db.scalar(stmt)
         if not deleted_file:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "删除失败: 文件不存在")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"删除失败: 文件 {file_name} 不存在")
 
         stmt = update(User).where(User.id == current_dir.user_id).values(used_space=User.used_space - deleted_file.size)
         await db.execute(stmt)

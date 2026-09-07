@@ -1,8 +1,8 @@
 import re
 from fastapi import HTTPException, status
 
-# 禁止字符 <>:"|?*\\/ 与 控制字符 \x00-\x1f 以及 空格 \s
-FORBIDDEN_PATTERN = re.compile(r'[<>:"|?*\x00-\x1f]')
+# 禁止字符 <>:"|?*+ 与 控制字符 \x00-\x1f 以及 空格 \s
+FORBIDDEN_PATTERN = re.compile(r'[<>:"|?*+\x00-\x1f]')
 SPACE_PATTERN = re.compile(r"\s")
 
 # Windows 保留文件名
@@ -102,15 +102,16 @@ def validate_password(password: str) -> str:
     return password
 
 
-def _validate_item(name: str, name_type: str, max_len: int) -> str:
+def _validate_item(name: str, name_type: str, max_len: int, allow_hidden: bool = False) -> str:
     name = _base_validation(name, name_type, max_len=max_len)
 
     # 禁止连续点号、允许以点号开头、禁止以点号结尾
     if re.search(r"\.{2,}", name):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能包含连续的点号")
 
-    # if name.startswith("."):
-    #     raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能以 '.' 开头")
+    if not allow_hidden:
+        if name.startswith("."):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能以 '.' 开头")
 
     if name.endswith("."):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{name_type}不能以 '.' 结尾")
@@ -122,15 +123,11 @@ def _validate_item(name: str, name_type: str, max_len: int) -> str:
 
 
 def validate_dir_name(dir_name: str) -> str:
-    return _validate_item(dir_name, "目录名", max_len=MAX_DFNAME_LENGTH)
+    return _validate_item(dir_name, "目录名", max_len=MAX_DFNAME_LENGTH, allow_hidden=True)
 
 
 def validate_file_name(file_name: str) -> str:
-    return _validate_item(file_name, "文件名", max_len=MAX_DFNAME_LENGTH)
-
-
-def validate_file_name_allow_hidden(file_name: str) -> str:
-    return _validate_item(file_name, "文件名", max_len=MAX_DFNAME_LENGTH)
+    return _validate_item(file_name, "文件名", max_len=MAX_DFNAME_LENGTH, allow_hidden=True)
 
 
 def validate_dir_path(dir_path: str) -> str:
@@ -146,6 +143,6 @@ def validate_dir_path(dir_path: str) -> str:
     parts = dir_path.split("/")
     for part in parts:
         if part:
-            _validate_item(part, "目录名", max_len=MAX_DFNAME_LENGTH)
+            _validate_item(part, "目录名", max_len=MAX_DFNAME_LENGTH, allow_hidden=True)
 
     return dir_path

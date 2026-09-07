@@ -13,13 +13,12 @@ const router = createRouter({
         { path: '/register', component: Register },
         { path: '/:username/', component: Home },
         { path: '/:username/profile', component: Profile },
-        { path: '/:username/:pathMatch(.*)', component: Home }
+        { path: '/:username/:dirPath(.*)', component: Home }
         // :path 或 :path/ 表示参数是 to/from.params.path 的字符串值
         // :path(.*) 表示 path 是一个字符串并可以包含 /（包括尾部的 / ）
         // :path(.*)* 表示 path 是一个字符串数组并不包含任何 /（如果尾部出现 / 数组最后一项将是 '' ）
     ]
 });
-
 
 router.beforeEach(async (to, from) => {
     const userStore = useUserStore();
@@ -50,13 +49,13 @@ router.beforeEach(async (to, from) => {
             }
         }
 
-        if (!to.params.pathMatch && to.path.endsWith('/profile/')) {
+        if (!to.params.dirPath && to.path.endsWith('/profile/')) {
             return `/${userStore.user.username}/profile`;
         }
 
-        if (typeof to.params.pathMatch === 'string') {
-            if (!to.params.pathMatch.endsWith('/')) {
-                return `/${userStore.user.username}/${to.params.pathMatch}/`;
+        if (typeof to.params.dirPath === 'string') {
+            if (!to.params.dirPath.endsWith('/')) {
+                return `/${userStore.user.username}/${to.params.dirPath}/`;
             }
         }
     }
@@ -64,7 +63,7 @@ router.beforeEach(async (to, from) => {
     // console.log('来自路径:', from.path);
     // console.log('去往路径:', to.path);
     // console.log('username:', to.params.username);
-    // console.log('pathMatch:', to.params.pathMatch);
+    // console.log('dirPath:', to.params.dirPath);
     // console.log("userStore.user.username", userStore.user.username);
 
     return true;

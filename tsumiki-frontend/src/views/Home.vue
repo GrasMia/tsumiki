@@ -208,10 +208,10 @@
 
     // 计算属性
     const currentPath = computed(() => {
-        const pathMatch = route.params.pathMatch;
-        if (!pathMatch)
+        const dirPath = route.params.dirPath;
+        if (!dirPath)
             return '';
-        return Array.isArray(pathMatch) ? pathMatch.join('/') + '/' : pathMatch;
+        return Array.isArray(dirPath) ? dirPath.join('/') + '/' : dirPath;
     });
     const breadcrumbItems = computed(() => {
         if (!currentPath.value)
@@ -563,11 +563,22 @@
         }
         if (key === 'profile') {
             router.push(`/${userStore.user.username}/profile`);
+            listCacheStore.itemsCache.push({ path: route.path, list: dataList.value });
         }
     };
 
     // 生命周期
-    onMounted(async () => await loadDirectory(currentPath.value));
+    onMounted(async () => {
+        // 从 profile 回退时使用缓存
+        if (route.path === listCacheStore.itemsCache[listCacheStore.itemsCache.length - 1]?.path) {
+            const item = listCacheStore.itemsCache.pop();
+            if (item?.list) {
+                dataList.value = item.list;
+                return;
+            }
+        }
+        await loadDirectory(currentPath.value);
+    });
 
     watch(() => route.path, async (toPath, fromPath) => {
         const matchRes = listCacheStore.matchCache(toPath, fromPath, dataList.value);
