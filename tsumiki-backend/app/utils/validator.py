@@ -1,8 +1,8 @@
 import re
 from fastapi import HTTPException, status
 
-# 禁止字符 <>:"|?*+ 与 控制字符 \x00-\x1f 以及 空格 \s
-FORBIDDEN_PATTERN = re.compile(r'[<>:"|?*+\x00-\x1f]')
+# 禁止字符 <>:"|?* 与 控制字符 \x00-\x1f 以及 空格 \s
+FORBIDDEN_PATTERN = re.compile(r'[<>:"|?*\x00-\x1f]')
 SPACE_PATTERN = re.compile(r"\s")
 
 # Windows 保留文件名

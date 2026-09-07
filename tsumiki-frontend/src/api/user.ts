@@ -60,11 +60,11 @@ export const userApi = {
     },
 
     modifyUsername: (user_id: string, newName: string) => {
-        return http<DetailResponse>(`/users/${user_id}/username?new_name=${newName}`, { method: 'PATCH' });
+        return http<DetailResponse>(`/users/${user_id}/username?new_name=${encodeURIComponent(newName)}`, { method: 'PATCH' });
     },
 
     modifyEmail: (user_id: string, newEmail: string) => {
-        return http<DetailResponse>(`/users/${user_id}/email?new_email=${newEmail}`, { method: 'PATCH' });
+        return http<DetailResponse>(`/users/${user_id}/email?new_email=${encodeURIComponent(newEmail)}`, { method: 'PATCH' });
     },
 
     modifyPassword: (user_id: string, params: UpdatePasswordParams) => {
@@ -86,6 +86,6 @@ export const userApi = {
     },
 
     inactive: (user_id: string, password: string) => {
-        return http<DetailResponse>(`/users/${user_id}/inactive/password?password=${password}`, { method: 'PUT', });
+        return http<DetailResponse>(`/users/${user_id}/inactive/password?password=${encodeURIComponent(password)}`, { method: 'PUT' });
     },
 };

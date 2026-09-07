@@ -494,10 +494,10 @@
     // 执行移动
     const confirmMove = async () => {
         moveLoading.value = true;
-        let target_path = `${userStore.user_id}/${targetPath.value}`
-        let original_path = `${userStore.user_id}/${currentPath.value}`
-        target_path = encodeURIComponent(target_path.endsWith("/") ? target_path.slice(0, -1) : target_path)
-        original_path = encodeURIComponent(original_path.endsWith("/") ? original_path.slice(0, -1) : original_path)
+        let target_path = `${userStore.user_id}/${targetPath.value}`;
+        let original_path = `${userStore.user_id}/${currentPath.value}`;
+        target_path = target_path.endsWith("/") ? target_path.slice(0, -1) : target_path;
+        original_path = original_path.endsWith("/") ? original_path.slice(0, -1) : original_path;
 
         try {
             const res = moveItem.value?.isFile

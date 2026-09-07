@@ -60,8 +60,8 @@ export const diskApi = {
 
     createDir: (user_id: string, path: string = '', newDirName: string) => {
         let url = path ?
-            `/disk/${user_id}/${path}?new_dir_name=${newDirName}` :
-            `/disk/${user_id}/?new_dir_name=${newDirName}`;
+            `/disk/${user_id}/${path}?new_dir_name=${encodeURIComponent(newDirName)}` :
+            `/disk/${user_id}/?new_dir_name=${encodeURIComponent(newDirName)}`;
 
         return http<DetailResponse>(url, { method: 'POST' });
     },
@@ -93,40 +93,47 @@ export const diskApi = {
 
     deleteDir: (user_id: string, path: string = '', hashSHA256: string = '') => {
         let url = path ? `/disk/${user_id}/${path}` : `/disk/${user_id}/`;
-        url = hashSHA256 ? `${url}?dir_name=${hashSHA256}` : url;
+        url = hashSHA256 ? `${url}?dir_name=${encodeURIComponent(hashSHA256)}` : url;
 
         return http<DetailResponse>(url, { method: 'DELETE' });
     },
 
     deleteFile: (user_id: string, path: string = '', fileName: string) => {
-        let url = path ? `/disk/${user_id}/${path}?file_name=${fileName}` : `/disk/${user_id}/?file_name=${fileName}`;
+        let url = path ? `/disk/${user_id}/${path}?file_name=${encodeURIComponent(fileName)}`
+            : `/disk/${user_id}/?file_name=${encodeURIComponent(fileName)}`;
 
         return http<DetailResponse>(url, { method: 'DELETE' });
     },
 
     renameDir: (user_id: string, path: string = '', dirName: string, newName: string) => {
         let url = path ?
-            `/disk/${user_id}/${path}?dir_name=${dirName}&new_name=${newName}` :
-            `/disk/${user_id}/?dir_name=${dirName}&new_name=${newName}`;
+            `/disk/${user_id}/${path}?dir_name=${encodeURIComponent(dirName)}&new_name=${encodeURIComponent(newName)}` :
+            `/disk/${user_id}/?dir_name=${encodeURIComponent(dirName)}&new_name=${encodeURIComponent(newName)}`;
 
         return http<DetailResponse>(url, { method: 'PUT' });
     },
 
     renameFile: (user_id: string, path: string = '', fileName: string, newName: string) => {
         let url = path ?
-            `/disk/${user_id}/${path}?file_name=${fileName}&new_name=${newName}` :
-            `/disk/${user_id}/?file_name=${fileName}&new_name=${newName}`;
+            `/disk/${user_id}/${path}?file_name=${encodeURIComponent(fileName)}&new_name=${encodeURIComponent(newName)}` :
+            `/disk/${user_id}/?file_name=${encodeURIComponent(fileName)}&new_name=${encodeURIComponent(newName)}`;
 
         return http<DetailResponse>(url, { method: 'PUT' });
     },
 
     moveDir: (target_path: string, original_path: string, dirName: string) => {
+        target_path = encodeURIComponent(target_path);
+        original_path = encodeURIComponent(original_path);
+        dirName = encodeURIComponent(dirName);
         let url = `/disk/?target_path=${target_path}&original_path=${original_path}&dir_name=${dirName}`;
 
         return http<DetailResponse>(url, { method: 'PUT' });
     },
 
     moveFile: (target_path: string, original_path: string, fileName: string) => {
+        target_path = encodeURIComponent(target_path);
+        original_path = encodeURIComponent(original_path);
+        fileName = encodeURIComponent(fileName);
         let url = `/disk/?target_path=${target_path}&original_path=${original_path}&file_name=${fileName}`;
 
         return http<DetailResponse>(url, { method: 'PUT' });
