@@ -2,7 +2,7 @@ import { ofetch, $fetch } from 'ofetch';
 import { isTokenValid, useUserStore } from "@/stores/user"
 
 // 创建 ofetch 实例
-const http = ofetch.create({
+export const http = ofetch.create({
     baseURL: '',
     timeout: 30000,
     // 请求拦截器：添加 Token
@@ -44,7 +44,7 @@ const http = ofetch.create({
     }
 });
 
-const authHttp = ofetch.create({
+export const authHttp = ofetch.create({
     baseURL: '',
     timeout: 30000,
     headers: { 'Content-Type': 'application/json' },
@@ -62,9 +62,3 @@ const authHttp = ofetch.create({
         throw new Error(message);
     }
 });
-
-type DetailResponse = {
-    detail: string
-};
-
-export { http, authHttp, type DetailResponse };

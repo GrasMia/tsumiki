@@ -54,7 +54,7 @@ async def register(user_data: RegisterParams, db: AsyncSession = Depends(get_db_
         .returning(Dir)
     )
     if user_root_dir is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "请求异常，账户创建失败(无法获取根目录)")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "请求异常，账户创建失败(无法验证用户目录)")
 
     await db.commit()
 

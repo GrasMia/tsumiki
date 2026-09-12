@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from app.models import Status
 
 
-class DirInfo(BaseModel):
+class DirItem(BaseModel):
     name: str
     created_at: datetime
     modified_at: datetime
@@ -16,7 +16,7 @@ class DirInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FileInfo(BaseModel):
+class FileItem(BaseModel):
     name: str
     size: int = Field(gt=0)
     sha256: str = Field(min_length=64, max_length=64)

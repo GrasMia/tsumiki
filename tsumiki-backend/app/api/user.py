@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, UploadFile, Path, Query, Body, File
 from fastapi.responses import FileResponse
 from pydantic import EmailStr
 from sqlalchemy import select
@@ -17,8 +17,8 @@ router = APIRouter(tags=["users"])
 
 
 @router.get("/{user_id}/info", response_model=UserProfile)
-async def get_user_info(
-    user_id: int,
+async def get_user_profile(
+    user_id: int = Path(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async_auto),
 ):
@@ -34,8 +34,8 @@ async def get_user_info(
 
 @router.patch("/{user_id}/username")
 async def modify_user_name(
-    user_id: int,
-    new_name: str,
+    user_id: int = Path(...),
+    new_name: str = Query(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async),
 ):
@@ -57,13 +57,13 @@ async def modify_user_name(
     current_user.username = new_name
     await db.commit()
 
-    return {"detail": "用户名更新成功"}
+    return {"detail": "用户名已更改"}
 
 
 @router.patch("/{user_id}/email")
 async def modify_user_email(
-    user_id: int,
-    new_email: EmailStr,
+    user_id: int = Path(...),
+    new_email: EmailStr = Query(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async),
 ):
@@ -83,13 +83,13 @@ async def modify_user_email(
     current_user.email = new_email
     await db.commit()
 
-    return {"detail": "邮箱已修改"}
+    return {"detail": "邮箱已更新"}
 
 
 @router.patch("/{user_id}/password")
 async def modify_password(
-    user_id: int,
-    password_data: UpdatePasswordParams,
+    user_id: int = Path(...),
+    password_data: UpdatePasswordParams = Body(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async),
 ):
@@ -116,8 +116,8 @@ async def modify_password(
 
 @router.put("/{user_id}/avatar")
 async def modify_avatar(
-    user_id: int,
-    upload_file: UploadFile,
+    user_id: int = Path(...),
+    upload_file: UploadFile = File(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async),
 ):
@@ -131,7 +131,7 @@ async def modify_avatar(
 
 @router.get("/{user_id}/avatar")
 async def get_avatar(
-    user_id: int,
+    user_id: int = Path(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async_auto),
 ):
@@ -148,7 +148,7 @@ async def get_avatar(
 
 @router.delete("/{user_id}/avatar")
 async def reset_avatar(
-    user_id: int,
+    user_id: int = Path(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async_auto),
 ):
@@ -165,8 +165,8 @@ async def reset_avatar(
 
 @router.put("/{user_id}/inactive")
 async def user_inactive(
-    user_id: int,
-    password: str,
+    user_id: int = Path(...),
+    password: str = Query(...),
     db: AsyncSession = Depends(get_db_async),
     current_user_id: User = Depends(get_current_user_id),
 ):

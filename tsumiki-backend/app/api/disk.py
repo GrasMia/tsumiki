@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, HTTPException, status, UploadFile, Depends, Query, File
+from fastapi import APIRouter, Body, HTTPException, status, UploadFile, Depends, Path, Query, File
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db_async, get_db_async_auto
 from app.models import Dir, Status
-from app.schemas import DirInfo, FileInfo, FileMetadata, ChunkInfo, ChunkMetadata
+from app.schemas import DirItem, FileItem, FileMetadata, ChunkInfo, ChunkMetadata
 from app.services import DirService, FileService, StorageService
 from app.core.dependencies import get_current_user_id
 from app.exceptions import DIR_NOT_FOUND, USER_INCONSISTENT
@@ -16,8 +16,8 @@ router = APIRouter(tags=["disk"])
 
 
 @router.get("/{dir_path:path}/")  # :path → 多级路径匹配
-async def get_list(
-    dir_path: str,
+async def get_dir_items(
+    dir_path: str = Path(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async_auto),
 ):
@@ -37,51 +37,15 @@ async def get_list(
     if current_dir.user_id != current_user_id:
         raise USER_INCONSISTENT
 
-    dirs = [DirInfo.model_validate(dir) for dir in current_dir.children]
-    files = [FileInfo.model_validate(file) for file in current_dir.files]
+    dirs = [DirItem.model_validate(dir) for dir in current_dir.children]
+    files = [FileItem.model_validate(file) for file in current_dir.files]
 
     return dirs + files
 
 
-@router.get("/{dir_path:path}/{file_name}")  # 尾部不跟 / 表示参数 {file_name} 是文件而不是目录
-async def download_file(
-    dir_path: str,
-    file_name: str,
-    token: str = Query(...),
-    db: AsyncSession = Depends(get_db_async),
-):
-    dir_path = validate_dir_path(dir_path)
-    file_name = validate_file_name(file_name)
-    current_user_id = get_current_user_id(token)
-
-    current_dir = await db.scalar(select(Dir).where(Dir.path == ("/" + dir_path + "/")))
-    if not current_dir:
-        raise DIR_NOT_FOUND
-    if current_dir.user_id != current_user_id:
-        raise USER_INCONSISTENT
-
-    physical_path, file_name = await FileService.download_file(current_dir=current_dir, file_name=file_name, db=db)
-    # 返回文件响应
-    return FileResponse(path=physical_path, filename=file_name, media_type="application/octet-stream")
-
-
-@router.patch("/{user_id}/", response_model=ChunkInfo)
-async def chunk_upload(
-    user_id: int,
-    chunk_metadata: ChunkMetadata = Depends(ChunkMetadata.init_by_form),
-    upload_file: UploadFile = File(...),
-    current_user_id: int = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db_async),
-):
-    if user_id != current_user_id:
-        raise USER_INCONSISTENT
-
-    return await StorageService.chunk_upload(chunk_metadata, upload_file, db)
-
-
 @router.post("/{dir_path:path}/")
 async def create(
-    dir_path: str,
+    dir_path: str = Path(...),
     new_dir_name: str | None = Query(None),
     file_metadata: FileMetadata | None = Body(None),
     current_user_id: int = Depends(get_current_user_id),
@@ -135,49 +99,45 @@ async def create(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "操作失败: 存在缺失或多余的参数")
 
 
-@router.delete("/{dir_path:path}/")
-async def delete(
-    dir_path: str,
-    dir_name: str | None = Query(default=None),
-    file_name: str | None = Query(default=None),
+@router.patch("/{user_id}/", response_model=ChunkInfo)
+async def chunk_upload(
+    user_id: int = Path(...),
+    chunk_metadata: ChunkMetadata = Depends(ChunkMetadata.init_by_form),
+    upload_file: UploadFile = File(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async),
 ):
+    if user_id != current_user_id:
+        raise USER_INCONSISTENT
+
+    return await StorageService.chunk_upload(chunk_metadata, upload_file, db)
+
+
+@router.get("/{dir_path:path}/{file_name}")  # 尾部不跟 / 表示参数 {file_name} 是文件而不是目录
+async def download_file(
+    dir_path: str = Path(...),
+    file_name: str = Path(...),
+    token: str = Query(...),
+    db: AsyncSession = Depends(get_db_async),
+):
     dir_path = validate_dir_path(dir_path)
+    file_name = validate_file_name(file_name)
+    current_user_id = get_current_user_id(token)
 
-    if dir_name and not file_name:
-        dir_name = validate_dir_name(dir_name)
+    current_dir = await db.scalar(select(Dir).where(Dir.path == ("/" + dir_path + "/")))
+    if not current_dir:
+        raise DIR_NOT_FOUND
+    if current_dir.user_id != current_user_id:
+        raise USER_INCONSISTENT
 
-        delete_dir = await db.scalar(select(Dir).where(Dir.path == (f"/{dir_path}/{dir_name}/")).with_for_update())
-        if not delete_dir:
-            raise DIR_NOT_FOUND
-        if delete_dir.user_id != current_user_id:
-            raise USER_INCONSISTENT
-
-        deleted_file_names = await DirService.delete_dir(delete_dir, db)
-        if not deleted_file_names:
-            return {"detail": f"目录 {dir_name} 已删除"}
-        return {"detail": f"目录 {dir_name} 已删除, 包含文件: {'、'.join(deleted_file_names)}"}
-
-    elif file_name and not dir_name:
-        file_name = validate_file_name(file_name)
-
-        current_dir = await db.scalar(select(Dir).where(Dir.path == ("/" + dir_path + "/")).with_for_update())
-        if not current_dir:
-            raise DIR_NOT_FOUND
-        if current_dir.user_id != current_user_id:
-            raise USER_INCONSISTENT
-
-        await FileService.delete_file(current_dir, file_name, db)
-        return {"detail": f"文件 {file_name} 已删除"}
-
-    else:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "删除失败: 存在缺失或多余的参数")
+    physical_path, file_name = await FileService.download_file(current_dir=current_dir, file_name=file_name, db=db)
+    # 返回文件响应
+    return FileResponse(path=physical_path, filename=file_name, media_type="application/octet-stream")
 
 
 @router.put("/{dir_path:path}/")
 async def rename(
-    dir_path: str,
+    dir_path: str = Path(...),
     dir_name: str | None = Query(default=None),
     file_name: str | None = Query(default=None),
     new_name: str = Query(...),
@@ -271,3 +231,43 @@ async def move(
 
     else:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "移动失败: 存在缺失或多余的参数")
+
+
+@router.delete("/{dir_path:path}/")
+async def delete(
+    dir_path: str = Path(...),
+    dir_name: str | None = Query(default=None),
+    file_name: str | None = Query(default=None),
+    current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_async),
+):
+    dir_path = validate_dir_path(dir_path)
+
+    if dir_name and not file_name:
+        dir_name = validate_dir_name(dir_name)
+
+        delete_dir = await db.scalar(select(Dir).where(Dir.path == (f"/{dir_path}/{dir_name}/")).with_for_update())
+        if not delete_dir:
+            raise DIR_NOT_FOUND
+        if delete_dir.user_id != current_user_id:
+            raise USER_INCONSISTENT
+
+        deleted_file_names = await DirService.delete_dir(delete_dir, db)
+        if not deleted_file_names:
+            return {"detail": f"目录 {dir_name} 已删除"}
+        return {"detail": f"目录 {dir_name} 已删除, 包含文件: {'、'.join(deleted_file_names)}"}
+
+    elif file_name and not dir_name:
+        file_name = validate_file_name(file_name)
+
+        current_dir = await db.scalar(select(Dir).where(Dir.path == ("/" + dir_path + "/")).with_for_update())
+        if not current_dir:
+            raise DIR_NOT_FOUND
+        if current_dir.user_id != current_user_id:
+            raise USER_INCONSISTENT
+
+        await FileService.delete_file(current_dir, file_name, db)
+        return {"detail": f"文件 {file_name} 已删除"}
+
+    else:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "删除失败: 存在缺失或多余的参数")

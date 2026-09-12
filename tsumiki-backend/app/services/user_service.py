@@ -91,7 +91,7 @@ class UserService:
         if not current_user:
             raise USER_NOT_FOUND
         if not current_user.avatar:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "无头像上传记录无法重置")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "无头像上传记录")
 
         physical_path = AVATAR_PATH / current_user.avatar
         if physical_path.exists():

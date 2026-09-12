@@ -129,8 +129,7 @@
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">状态：</span>
-                        <n-tag :type="selectedFile?.deleted_at ? 'error' : 'success'" size="small">
-                            {{ selectedFile?.deleted_at ? '已删除' : '正常' }}</n-tag>
+                        <n-tag type="success" size="small">{{ '正常' }}</n-tag>
                     </div>
                 </div>
                 <template #action>
@@ -166,7 +165,7 @@
     import { isTokenValid, useUserStore } from '@/stores/user';
     import { useUploadStore } from '@/stores/upload';
     import { useListCacheStore } from '@/stores/listCache';
-    import { type ChunkMetadata, type DataItem, type FileInfo, Status, diskApi } from '@/api/disk';
+    import { type ChunkMetadata, type DataItem, type FileItem, Status, diskApi } from '@/api/disk';
     import { useMessage, useDialog, NButton, NSpace, NInput, NIcon, NLayout, NLayoutHeader, NLayoutContent } from 'naive-ui'
     import { NCard, NStatistic, NH2, NText, NAvatar, NDropdown, NBreadcrumb, NBreadcrumbItem, } from 'naive-ui'
     import { NModal, NTag, NUpload, NProgress, NForm, NFormItem, type UploadCustomRequestOptions } from 'naive-ui';
@@ -197,7 +196,7 @@
 
     // 文件详情
     const showFileDetail = ref(false);
-    const selectedFile = ref<FileInfo | null>(null);
+    const selectedFile = ref<FileItem | null>(null);
     const selectedFileRow = ref<DataItem | null>(null);
 
     // 移动对话框
@@ -237,7 +236,7 @@
 
     const loadDirectory = async (path: string) => {
         try {
-            dataList.value = await diskApi.get_list(userStore.user_id, path);
+            dataList.value = await diskApi.getDirItems(userStore.user_id, path);
         } catch (e: unknown) {
             dataList.value = [];
             message.error(e instanceof Error ? e.message : String(e));
@@ -403,7 +402,7 @@
     // 文件详情
     const getFileDetail = async (row: DataItem) => {
         if (row.size && row.sha256) {
-            selectedFile.value = { ...row } as FileInfo;
+            selectedFile.value = { ...row } as FileItem;
             selectedFileRow.value = row;
             showFileDetail.value = true;
         }

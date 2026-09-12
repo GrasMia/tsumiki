@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "default_secret_key"
     ALGORITHM: str = "HS256"
 
-    ACCESS_TOKEN_TYPE: str = "Bearer"
+    ACCESS_TOKEN_PREFIX: str = "Bearer"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 15
 

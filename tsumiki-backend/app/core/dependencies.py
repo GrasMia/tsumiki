@@ -21,8 +21,8 @@ def get_access_token(access_token: str = Security(oauth2_scheme)) -> str:
 def get_current_user_id(token: str = Security(oauth2_scheme)) -> int:
     if not token:
         raise INVALID_CREDENTIALS
-    if token.startswith(f"{settings.ACCESS_TOKEN_TYPE} "):
-        token = token.replace(f"{settings.ACCESS_TOKEN_TYPE} ", "")
+    if token.startswith(f"{settings.ACCESS_TOKEN_PREFIX} "):
+        token = token.replace(f"{settings.ACCESS_TOKEN_PREFIX} ", "")
 
     try:
         """jwt.decode() 参数说明：
@@ -53,7 +53,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    return f"{settings.ACCESS_TOKEN_TYPE} {jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)}"
+    return f"{settings.ACCESS_TOKEN_PREFIX} {jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)}"
 
 
 def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> str:

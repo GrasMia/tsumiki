@@ -1,27 +1,19 @@
-import { http, type DetailResponse } from './index';
+import { http } from './index';
 
-export interface DataItem {
+interface BaseItem {
     name: string
+    created_at: Date
+    modified_at: Date
+}
+
+export interface DataItem extends BaseItem {
     size?: number
     sha256?: string
-    created_at: Date
-    modified_at: Date
 }
 
-export interface DirInfo {
-    name: string
-    created_at: Date
-    modified_at: Date
-}
-
-export interface FileInfo {
-    name: string
+export interface FileItem extends BaseItem {
     size: number
     sha256: string
-    created_at?: Date
-    modified_at?: Date
-    deleted_at?: Date
-    expires_at?: Date
 }
 
 export interface FileMetadata {
@@ -50,18 +42,22 @@ export interface ChunkMetadata {
     upload_file: Blob
 }
 
+type DetailResponse = {
+    detail: string
+}
+
 export const diskApi = {
-    get_list: (user_id: string, path: string = '') => {
+    getDirItems: (user_id: string, path: string = '') => {
         const url = path
             ? `/disk/${user_id}/${path}`
             : `/disk/${user_id}/`;
         return http<Array<DataItem>>(url, { method: 'GET' });
     },
 
-    createDir: (user_id: string, path: string = '', newDirName: string) => {
+    createDir: (user_id: string, path: string = '', new_dir_name: string) => {
         let url = path ?
-            `/disk/${user_id}/${path}?new_dir_name=${encodeURIComponent(newDirName)}` :
-            `/disk/${user_id}/?new_dir_name=${encodeURIComponent(newDirName)}`;
+            `/disk/${user_id}/${path}?new_dir_name=${encodeURIComponent(new_dir_name)}` :
+            `/disk/${user_id}/?new_dir_name=${encodeURIComponent(new_dir_name)}`;
 
         return http<DetailResponse>(url, { method: 'POST' });
     },
@@ -91,51 +87,51 @@ export const diskApi = {
         a.click();
     },
 
-    deleteDir: (user_id: string, path: string = '', hashSHA256: string = '') => {
+    renameDir: (user_id: string, path: string = '', dir_name: string, new_name: string) => {
+        let url = path ?
+            `/disk/${user_id}/${path}?dir_name=${encodeURIComponent(dir_name)}&new_name=${encodeURIComponent(new_name)}` :
+            `/disk/${user_id}/?dir_name=${encodeURIComponent(dir_name)}&new_name=${encodeURIComponent(new_name)}`;
+
+        return http<DetailResponse>(url, { method: 'PUT' });
+    },
+
+    renameFile: (user_id: string, path: string = '', file_name: string, new_name: string) => {
+        let url = path ?
+            `/disk/${user_id}/${path}?file_name=${encodeURIComponent(file_name)}&new_name=${encodeURIComponent(new_name)}` :
+            `/disk/${user_id}/?file_name=${encodeURIComponent(file_name)}&new_name=${encodeURIComponent(new_name)}`;
+
+        return http<DetailResponse>(url, { method: 'PUT' });
+    },
+
+    moveDir: (target_path: string, original_path: string, dir_name: string) => {
+        target_path = encodeURIComponent(target_path);
+        original_path = encodeURIComponent(original_path);
+        dir_name = encodeURIComponent(dir_name);
+        let url = `/disk/?target_path=${target_path}&original_path=${original_path}&dir_name=${dir_name}`;
+
+        return http<DetailResponse>(url, { method: 'PUT' });
+    },
+
+    moveFile: (target_path: string, original_path: string, file_name: string) => {
+        target_path = encodeURIComponent(target_path);
+        original_path = encodeURIComponent(original_path);
+        file_name = encodeURIComponent(file_name);
+        let url = `/disk/?target_path=${target_path}&original_path=${original_path}&file_name=${file_name}`;
+
+        return http<DetailResponse>(url, { method: 'PUT' });
+    },
+
+    deleteDir: (user_id: string, path: string = '', dir_name: string = '') => {
         let url = path ? `/disk/${user_id}/${path}` : `/disk/${user_id}/`;
-        url = hashSHA256 ? `${url}?dir_name=${encodeURIComponent(hashSHA256)}` : url;
+        url = dir_name ? `${url}?dir_name=${encodeURIComponent(dir_name)}` : url;
 
         return http<DetailResponse>(url, { method: 'DELETE' });
     },
 
-    deleteFile: (user_id: string, path: string = '', fileName: string) => {
-        let url = path ? `/disk/${user_id}/${path}?file_name=${encodeURIComponent(fileName)}`
-            : `/disk/${user_id}/?file_name=${encodeURIComponent(fileName)}`;
+    deleteFile: (user_id: string, path: string = '', file_name: string) => {
+        let url = path ? `/disk/${user_id}/${path}?file_name=${encodeURIComponent(file_name)}`
+            : `/disk/${user_id}/?file_name=${encodeURIComponent(file_name)}`;
 
         return http<DetailResponse>(url, { method: 'DELETE' });
-    },
-
-    renameDir: (user_id: string, path: string = '', dirName: string, newName: string) => {
-        let url = path ?
-            `/disk/${user_id}/${path}?dir_name=${encodeURIComponent(dirName)}&new_name=${encodeURIComponent(newName)}` :
-            `/disk/${user_id}/?dir_name=${encodeURIComponent(dirName)}&new_name=${encodeURIComponent(newName)}`;
-
-        return http<DetailResponse>(url, { method: 'PUT' });
-    },
-
-    renameFile: (user_id: string, path: string = '', fileName: string, newName: string) => {
-        let url = path ?
-            `/disk/${user_id}/${path}?file_name=${encodeURIComponent(fileName)}&new_name=${encodeURIComponent(newName)}` :
-            `/disk/${user_id}/?file_name=${encodeURIComponent(fileName)}&new_name=${encodeURIComponent(newName)}`;
-
-        return http<DetailResponse>(url, { method: 'PUT' });
-    },
-
-    moveDir: (target_path: string, original_path: string, dirName: string) => {
-        target_path = encodeURIComponent(target_path);
-        original_path = encodeURIComponent(original_path);
-        dirName = encodeURIComponent(dirName);
-        let url = `/disk/?target_path=${target_path}&original_path=${original_path}&dir_name=${dirName}`;
-
-        return http<DetailResponse>(url, { method: 'PUT' });
-    },
-
-    moveFile: (target_path: string, original_path: string, fileName: string) => {
-        target_path = encodeURIComponent(target_path);
-        original_path = encodeURIComponent(original_path);
-        fileName = encodeURIComponent(fileName);
-        let url = `/disk/?target_path=${target_path}&original_path=${original_path}&file_name=${fileName}`;
-
-        return http<DetailResponse>(url, { method: 'PUT' });
     },
 };
