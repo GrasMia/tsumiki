@@ -15,6 +15,19 @@ const isTokenValid = (token: string) => {
     }
 };
 
+const getUserIdFromToken = (token: string): string => {
+    if (!token) return '';
+
+    try {
+        const parts = token.split('.');
+        if (parts[1] === undefined) return '';
+        const payload = JSON.parse(atob(parts[1]));
+        return payload.sub || '';
+    } catch {
+        return '';
+    }
+};
+
 const useUserStore = defineStore('user', () => {
     const user_id = ref(localStorage.getItem('user_id') || '');
     const access_token = ref(localStorage.getItem('access_token') || '');
@@ -22,29 +35,21 @@ const useUserStore = defineStore('user', () => {
     const refreshPromise = ref<Promise<string> | null>(null);
     const avatarBlobUrl = ref('');
 
+    const register = async (username: string, email: string, password: string) => {
+        return await userApi.register({ username, email, password });
+    };
+
     const login = async (username: string, password: string) => {
         const res = await userApi.login({ username, password });
         user.value = res.user;
-        localStorage.setItem('user_id', user_id.value = String(res.user.id));
+        localStorage.setItem('user_id', getUserIdFromToken(res.access_token));
         localStorage.setItem('access_token', access_token.value = res.access_token);
 
         await loadAvatar();
     };
 
-    const register = async (username: string, email: string, password: string) => {
-        return await userApi.register({ username, email, password });
-    };
-
-    const logout = async () => {
-        user_id.value = '';
-        access_token.value = '';
-        user.value = {} as UserProfile;
-        localStorage.removeItem('user_id');
-        localStorage.removeItem('access_token');
-
-        revokeAvatarUrl();
-
-        return await userApi.logout();
+    const fetchUser = async () => {
+        user.value = await userApi.getUserProfile(user_id.value)
     };
 
     const refreshToken = () => {
@@ -71,8 +76,14 @@ const useUserStore = defineStore('user', () => {
         avatarBlobUrl.value = '';
     };
 
-    const fetchUser = async () => {
-        user.value = await userApi.getUserProfile(user_id.value)
+    const logout = async () => {
+        user.value = {} as UserProfile;
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('access_token');
+
+        revokeAvatarUrl();
+
+        return await userApi.logout();
     };
 
     return {

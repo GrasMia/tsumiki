@@ -1,29 +1,25 @@
 import { http, authHttp } from './index';
 
-interface BaseParams {
+export interface LoginParams {
     username: string
     password: string
 }
 
-export interface LoginParams extends BaseParams {
-}
-
-export interface RegisterParams extends BaseParams {
+export interface RegisterParams extends LoginParams {
     email: string
 }
 
-export interface AuthResponse {
-    user: UserProfile
-    access_token: string
-}
-
 export interface UserProfile {
-    id: number
     username: string
     email: string
     total_space: number
     used_space: number
     created_at: string
+}
+
+export interface AuthResponse {
+    user: UserProfile
+    access_token: string
 }
 
 export interface UpdatePasswordParams {

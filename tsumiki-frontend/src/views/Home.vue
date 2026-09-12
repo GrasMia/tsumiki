@@ -1,5 +1,6 @@
 <template>
-    <n-layout class="home-container">
+    <n-layout :class="['home-container', { 'is-dragover': isDragOver }]" @dragover.prevent="handleDragOver"
+        @drop.prevent="handleDrop" @dragleave.prevent="handleDragLeave">
         <!-- 头部导航 -->
         <n-layout-header bordered class="header">
             <div class="header-left">
@@ -183,6 +184,7 @@
     const listCacheStore = useListCacheStore();
     const message = useMessage();
     const dialog = useDialog();
+    const userMenuOptions = [{ label: '个人设置', key: 'profile' }, { label: '退出登录', key: 'logout' }];
 
     // 状态
     const loading = ref(false);
@@ -231,8 +233,6 @@
         if (!keyword) return dataList.value;
         return dataList.value.filter(item => item.name.toLowerCase().includes(keyword));
     });
-
-    const userMenuOptions = [{ label: '个人设置', key: 'profile' }, { label: '退出登录', key: 'logout' }];
 
     const loadDirectory = async (path: string) => {
         try {
@@ -286,8 +286,8 @@
         }
     };
 
-    const chunkSize = parseInt(import.meta.env.VITE_UPLOAD_FILE_CHUNK_SIZE) * 1024 * 1024;
     // 文件上传
+    const chunkSize = parseInt(import.meta.env.VITE_UPLOAD_FILE_CHUNK_SIZE) * 1024 * 1024;
     const customUpload = async ({ file }: UploadCustomRequestOptions) => {
         // 清除文件列表
         uploadRef.value?.clear()
@@ -313,10 +313,8 @@
 
         // 秒传
         if (diskApi.isDetailResponse(initRes)) {
-            const item = { name: uploadFile.name, progress: 33 }
+            const item = { name: uploadFile.name, progress: 50 }
             uploadStore.addUpload(item);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            uploadStore.updateProgress(item, 66);
             await new Promise(resolve => setTimeout(resolve, 1000));
             uploadStore.updateProgress(item, 100);
 
@@ -384,6 +382,25 @@
                 message.error(error instanceof Error ? error.message : String(error));
                 uploadStore.removeUpload(item, userStore.user.username, originalPath);
             }
+        }
+    };
+
+    // 拖动上传
+    const isDragOver = ref(false);
+    const handleDragOver = () => { isDragOver.value = true };
+    const handleDrop = (e: DragEvent) => {
+        isDragOver.value = false;
+
+        const files = Array.from(e.dataTransfer?.files ? e.dataTransfer.files : []);
+        for (const file of files) {
+            customUpload({ file: { file } } as UploadCustomRequestOptions)
+        };
+    };
+    const handleDragLeave = (e: DragEvent) => {
+        const target = e.currentTarget as HTMLElement
+        const related = e.relatedTarget as Node
+        if (!related || !target.contains(related)) {
+            isDragOver.value = false;
         }
     };
 
@@ -590,6 +607,25 @@
     .home-container {
         min-height: 100vh;
         background: #f5f7fa;
+        position: relative;
+        transition: background-color 0.2s;
+    }
+
+    /* 拖拽高亮遮罩 */
+    .home-container.is-dragover::after {
+        content: '上传到此目录';
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: #fff;
+        background-color: rgba(94, 113, 106, 0.5);
+        border: 2px dashed rgba(94, 113, 106, 1);
+        border-radius: 8px;
+        pointer-events: none;
+        z-index: 10;
     }
 
     .header {

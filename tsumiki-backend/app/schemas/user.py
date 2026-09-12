@@ -9,7 +9,6 @@ class RegisterParams(BaseModel):
 
 
 class UserProfile(BaseModel):
-    id: int
     username: str = Field(..., min_length=5, max_length=20)
     email: EmailStr = Field("user@tsumiki.com")
     total_space: int
