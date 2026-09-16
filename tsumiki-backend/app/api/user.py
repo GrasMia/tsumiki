@@ -167,8 +167,8 @@ async def reset_avatar(
 async def user_inactive(
     user_id: int = Path(...),
     password: str = Query(...),
-    db: AsyncSession = Depends(get_db_async),
     current_user_id: User = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_async),
 ):
     if user_id != current_user_id:
         raise user_exceptions.USER_INCONSISTENT

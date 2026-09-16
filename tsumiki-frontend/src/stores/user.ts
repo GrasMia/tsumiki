@@ -44,17 +44,11 @@ const useUserStore = defineStore('user', () => {
         user.value = res.user;
         localStorage.setItem('user_id', getUserIdFromToken(res.access_token));
         localStorage.setItem('access_token', access_token.value = res.access_token);
-
-        await loadAvatar();
     };
 
     const fetchUser = async () => {
-        user.value = await userApi.getUserProfile(user_id.value)
-    };
-
-    const refreshToken = () => {
-        if (refreshPromise.value) return refreshPromise.value;
-        return refreshPromise.value = userApi.refresh();
+        user.value = await userApi.getUserProfile(user_id.value);
+        if (!avatarBlobUrl) { await loadAvatar(); }
     };
 
     const loadAvatar = async () => {
@@ -76,6 +70,11 @@ const useUserStore = defineStore('user', () => {
         avatarBlobUrl.value = '';
     };
 
+    const refreshToken = () => {
+        if (refreshPromise.value) return refreshPromise.value;
+        return refreshPromise.value = userApi.refresh();
+    };
+
     const logout = async () => {
         user.value = {} as UserProfile;
         localStorage.removeItem('user_id');
@@ -94,10 +93,10 @@ const useUserStore = defineStore('user', () => {
         avatarBlobUrl,
         register,
         login,
-        logout,
-        refreshToken,
+        fetchUser,
         loadAvatar,
-        fetchUser
+        refreshToken,
+        logout
     };
 });
 

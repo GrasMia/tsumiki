@@ -86,18 +86,12 @@ async def login(
         value=create_refresh_token(data={"sub": str(user.id)}),
         httponly=True,  # JS 无法读取
         secure=True,
-        samesite="lax",
+        samesite="strict",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
         path="/auth/refresh",  # 只在访问 /auth/refresh 这个路径时才会被发送到服务器
     )
 
     return AuthResponse(user=UserProfile.model_validate(user), access_token=access_token)
-
-
-@router.post("/logout")
-async def logout(response: Response):
-    response.delete_cookie("refresh_token")
-    return {"detail": "已注销登录"}
 
 
 @router.post("/refresh")
@@ -114,3 +108,18 @@ async def refresh_token(
     access_token = refresh_access_token(str(current_user_id), access_token)
 
     return access_token
+
+
+@router.post("/logout")
+async def logout(
+    response: Response,
+    access_token: str = Depends(get_access_token),
+    db: AsyncSession = Depends(get_db_async_auto),
+):
+    current_user_id = get_current_user_id(access_token)
+    current_user = await db.scalar(select(User).where(User.id == current_user_id))
+    if not current_user:
+        raise USER_NOT_FOUND
+
+    response.delete_cookie("refresh_token")
+    return {"detail": "已注销登录"}

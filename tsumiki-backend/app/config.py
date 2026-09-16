@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     LOCAL_STORAGE_PATH: str = "./wwwroot/files"
     LOCAL_AVATAR_PATH: str = "./wwwroot/avatars"
+    LOCAL_STATIC_PATH: str = "./wwwroot/static"
 
     UPLOAD_FILE_CHUNK_SIZE: int = 5
 

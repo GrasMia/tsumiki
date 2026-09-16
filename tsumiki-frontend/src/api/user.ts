@@ -48,12 +48,12 @@ export const userApi = {
         });
     },
 
-    logout: () => {
-        return authHttp<DetailResponse>('/auth/logout', { method: 'POST' });
-    },
-
     refresh: () => {
         return authHttp<string>(`/auth/refresh`, { method: 'POST' });
+    },
+
+    logout: () => {
+        return http<DetailResponse>('/auth/logout', { method: 'POST' });
     },
 
     getUserProfile: (user_id: string) => {
