@@ -15,14 +15,14 @@
                 </n-form-item>
 
                 <n-form-item>
-                    <n-button type="primary" size="large" block :loading="loading" @click="handleLogin">
+                    <n-button type="primary" size="large" block :loading="logging" @click="handleLogin">
                         登录
                     </n-button>
                 </n-form-item>
 
                 <div style="text-align: center">
                     <n-text depth="3">还没有账号？</n-text>
-                    <n-button text type="primary" @click="goToRegister">
+                    <n-button text type="primary" @click="goToRegister" :disabled="logging">
                         立即注册
                     </n-button>
                 </div>
@@ -34,9 +34,9 @@
 <script setup lang="ts">
     import { ref, useTemplateRef } from 'vue';
     import { useRouter } from 'vue-router';
-    import { useMessage, NButton, NCard, NForm, NFormItem, NInput, NH1, NText, type FormRules, type FormInst } from 'naive-ui';
+    import { useMessage, NButton, NCard, NForm, NFormItem, NInput, NH1, NText, type FormRules } from 'naive-ui';
     import { useUserStore } from '@/stores/user';
-    import { live2dAlert,live2dAlertPrompt, live2dAlertRhetorical } from '@/stores/live2d';
+    import { live2dAlert, live2dAlertPrompt, live2dAlertRhetorical } from '@/stores/live2d';
     import { preventSpace } from '@/utils/format';
 
     const router = useRouter();
@@ -45,7 +45,7 @@
 
     const formRef = useTemplateRef('formRef')
     const formData = ref({ username: '', password: '' });
-    const loading = ref(false);
+    const logging = ref(false);
 
     const rules: FormRules = {
         username: [
@@ -69,19 +69,17 @@
             return;
         }
 
-        loading.value = true;
+        logging.value = true;
         try {
             await userStore.login(formData.value.username, formData.value.password);
             live2dAlert('ログイン成功しました');
             message.success('登录成功');
-            router.push(`/${formData.value.username}/`);
+            router.push(`/`);
         } catch (error: unknown) {
-            live2dAlert('ログイン失敗しました')
+            live2dAlert('ログイン失敗しました');
             message.error(error instanceof Error ? error.message : String(error));
         }
-        finally {
-            loading.value = false;
-        }
+        logging.value = false;
     };
 
     const goToRegister = () => {

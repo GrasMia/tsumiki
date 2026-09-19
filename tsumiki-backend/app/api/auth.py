@@ -7,7 +7,7 @@ from app.config import settings
 from app.models import User, Dir
 from app.db import get_db_async, get_db_async_auto
 from app.schemas import RegisterParams, AuthResponse
-from app.schemas.user import UserProfile
+from app.schemas.user import UserInfo
 from app.utils import validate_password, validate_username
 from app.core.security import verify_password, get_password_hash
 from app.exceptions import EMAIL_ALREADY_EXISTS, USERNAME_ALREADY_EXISTS, USER_NOT_FOUND
@@ -91,7 +91,7 @@ async def login(
         path="/auth/refresh",  # 只在访问 /auth/refresh 这个路径时才会被发送到服务器
     )
 
-    return AuthResponse(user=UserProfile.model_validate(user), access_token=access_token)
+    return AuthResponse(user=UserInfo.model_validate(user), access_token=access_token)
 
 
 @router.post("/refresh")

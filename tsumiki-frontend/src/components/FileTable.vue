@@ -1,20 +1,20 @@
 <template>
-    <n-data-table :columns="columns" :data="data" :loading="loading" :row-key="rowKey" :bordered="bordered"
-        :striped="striped" :row-props="getRowProps" />
+    <n-data-table :columns="columns" :data="displayData" :row-key="rowKey" :bordered="bordered" :striped="striped"
+        :row-props="getRowProps" />
 </template>
 
 <script setup lang="ts">
     import { h, computed, ref, nextTick } from 'vue';
     import { NButton, NSpace, NIcon, NDataTable, NInput, type DataTableColumns } from 'naive-ui';
-    import { DownloadOutline, TrashOutline, CreateOutline,MoveOutline } from '@vicons/ionicons5';
+    import { DownloadOutline, TrashOutline, CreateOutline, MoveOutline } from '@vicons/ionicons5';
     import type { DataItem } from '@/api/disk';
     import { formatStorage } from '@/utils/format';
 
     const props = defineProps<{
         data: DataItem[];
-        loading?: boolean;
         bordered?: boolean;
         striped?: boolean;
+        moving?: boolean;
     }>();
 
     const emit = defineEmits<{
@@ -24,6 +24,11 @@
         (e: 'rowDblclick', row: DataItem): void;
         (e: 'move', row: DataItem): void;
     }>();
+
+    const displayData = computed(() => {
+        if (!props.moving) return props.data;
+        return props.data.filter(row => row.size === undefined); // 移动时只显示目录
+    });
 
     // 正在编辑的行
     const editingRow = ref<DataItem | null>(null);
@@ -88,10 +93,7 @@
             resizable: true,
             ellipsis: true,
             render(row) {
-                const isDir = row.size === undefined;
-                const isEditing = editingRow.value === row;
-
-                if (isEditing) {
+                if (editingRow.value === row) {
                     return h(NInput, {
                         value: editingName.value,
                         onUpdateValue: (val: string) => { editingName.value = val; },
@@ -106,7 +108,7 @@
                 }
 
                 return h('div', { style: 'display: flex; align-items: center; gap: 8px' }, [
-                    h('span', isDir ? '📁' : '📄'),
+                    h('span', row.size === undefined ? '📁' : '📄'),
                     h('span', row.name),
                 ]);
             }
@@ -134,17 +136,11 @@
             width: 230,
             align: 'center',
             render(row) {
-                const isDir = row.size === undefined;
-                const isEditing = editingRow.value === row;
+                if (editingRow.value === row || props.moving) { return null; }
 
-                if (isEditing) {
-                    return null;
-                }
-
-                // 所有按钮
                 const buttons = [
                     // 下载按钮（仅文件）
-                    ...(isDir ? [] : [h(NButton, {
+                    ...(row.size === undefined ? [] : [h(NButton, {
                         size: 'small',
                         quaternary: true,
                         onClick: () => emit('downloadFile', row.name),

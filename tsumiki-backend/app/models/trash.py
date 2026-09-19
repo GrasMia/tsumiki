@@ -20,7 +20,6 @@
 
 #     # 外键
 #     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False, index=True)
-#     storage_id: Mapped[int] = mapped_column(ForeignKey("storage.id"), nullable=False, index=True)
 
 #     # 关系
 #     user: Mapped["User"] = relationship(back_populates="trashes")

@@ -33,10 +33,7 @@ router.beforeEach(async (to, from) => {
     // 已登陆
     if (userStore.user_id && userStore.access_token) {
         // 如果用户已登录但 userStore 中没有用户信息，尝试从 localStorage 恢复用户信息
-        if (!userStore.user.username) {
-            await userStore.fetchUser();
-            await userStore.loadAvatar();
-        }
+        if (!userStore.user.username) { await userStore.fetchUser(); }
 
         // 当直接访问 http(s)://host:port 时 to.path 和 from.path 均是 /    →    即默认访问URL是 http(s)://host:port/
         if (to.path === '/' || to.path === `/${userStore.user.username}`) {
@@ -64,7 +61,7 @@ router.beforeEach(async (to, from) => {
     // console.log('去往路径:', to.path);
     // console.log('username:', to.params.username);
     // console.log('dirPath:', to.params.dirPath);
-    // console.log("userStore.user.username", userStore.user.username);
+    // console.log("userStore.user.username:", userStore.user.username);
 
     return true;
 });

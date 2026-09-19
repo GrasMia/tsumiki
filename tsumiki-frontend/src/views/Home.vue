@@ -46,27 +46,34 @@
 
             <!-- 操作栏 -->
             <div class="toolbar">
+                <n-input v-model:value="searchKeyword" placeholder="搜索文件" clearable class="toolbar-search"
+                    @keydown="preventSpace">
+                    <template #prefix><n-icon><search-outline /></n-icon></template>
+                </n-input>
+
                 <div class="toolbar-actions">
-                    <n-button @click="showCreateDirDialog = true">
+                    <n-button @click="showCreateDirDialog = true" v-show="!isMoving">
                         <template #icon><n-icon><add-outline /></n-icon></template>
                         新建目录
                     </n-button>
                     <n-upload ref="uploadRef" :show-file-list="false" :multiple="true" :custom-request="customUpload"
-                        accept="*/*">
+                        accept="*/*" v-show="!isMoving">
                         <n-button type="primary">
                             <template #icon><n-icon><cloud-upload-outline /></n-icon></template>
                             上传文件
                         </n-button>
                     </n-upload>
-                    <n-button @click="refreshFileList" type="tertiary">
+                    <n-button @click="refreshFileList" type="tertiary" v-show="!isMoving" :loading="refreshing">
                         <template #icon><n-icon><refresh-outline /></n-icon></template>
                         刷新
                     </n-button>
+                    <n-button @click="confirmMove" type="primary" v-show="isMoving" :loading="moveLoading">
+                        将{{ moveItem.isFile ? '文件 ' : '目录 ' }} {{ `"${moveItem.name}"` }} 移动至当前目录
+                    </n-button>
+                    <n-button @click="isMoving = false" type="tertiary" v-show="isMoving" :disabled="moveLoading">
+                        取消移动
+                    </n-button>
                 </div>
-                <n-input v-model:value="searchKeyword" placeholder="搜索文件" clearable class="toolbar-search"
-                    @mouseenter="live2dAlert('ファイルを検索したいんですか', 0.1)" @keydown="preventSpace">
-                    <template #prefix><n-icon><search-outline /></n-icon></template>
-                </n-input>
             </div>
 
             <!-- 上传进度 -->
@@ -80,8 +87,8 @@
 
             <!-- 文件列表 -->
             <div class="table-container">
-                <file-table :data="filteredFileList" :loading="loading" :row-key="(row: DataItem) => row.name"
-                    :bordered="true" :striped="true" @enter-dir="enterDir" @download-file="handleDownload"
+                <file-table :data="filteredFileList" :row-key="(row: DataItem) => row.name" :bordered="true"
+                    :moving="isMoving" :striped="true" @enter-dir="enterDir" @download-file="handleDownload"
                     @rename="handleRename" @move="handleMove" @delete="handleDelete"
                     @row-dblclick="handleRowDblclick" />
             </div>
@@ -140,22 +147,6 @@
                     </n-space>
                 </template>
             </n-modal>
-
-            <!-- 移动文件/目录对话框 -->
-            <n-modal v-model:show="showMoveDialog" preset="dialog" :style="{ width: '25rem' }"
-                :title="`移动${moveItem?.isFile ? '文件' : '目录'} ${moveItem?.name} 至`" draggable>
-                <n-form>
-                    <n-form-item label="目标路径（留空表示根目录）">
-                        <n-input v-model:value="targetPath" @keyup.enter="confirmMove" placeholder=".../.../..." />
-                    </n-form-item>
-                </n-form>
-                <template #action>
-                    <n-space>
-                        <n-button @click="showMoveDialog = false">取消</n-button>
-                        <n-button type="primary" @click="confirmMove" :loading="moveLoading">确定</n-button>
-                    </n-space>
-                </template>
-            </n-modal>
         </n-layout-content>
     </n-layout>
 </template>
@@ -177,6 +168,7 @@
     import { formatStorage, preventSpace } from '@/utils/format';
     import { debounce, throttle } from '@/utils/frequency';
 
+    // 公共依赖
     const route = useRoute();
     const router = useRouter();
     const userStore = useUserStore();
@@ -184,56 +176,53 @@
     const listCacheStore = useListCacheStore();
     const message = useMessage();
     const dialog = useDialog();
-    const userMenuOptions = [{ label: '个人设置', key: 'profile' }, { label: '退出登录', key: 'logout' }];
+    const userMenuOptions = [
+        { label: '个人设置', key: 'profile' },
+        { label: '退出登录', key: 'logout' }
+    ];
 
-    // 状态
-    const loading = ref(false);
+    // 公共状态
     const dataList = ref<DataItem[]>([]);
     const uploadRef = useTemplateRef('uploadRef');
 
-    // 新建目录
-    const showCreateDirDialog = ref(false);
-    const newDirName = ref('');
-    const createDirLoading = ref(false);
-
-    // 文件详情
-    const showFileDetail = ref(false);
-    const selectedFile = ref<FileItem | null>(null);
-    const selectedFileRow = ref<DataItem | null>(null);
-
-    // 移动对话框
-    const showMoveDialog = ref(false);
-    const moveLoading = ref(false);
-    const targetPath = ref('');
-    const moveItem = ref({ isFile: Boolean(), name: String() });
-
-    // 计算属性
+    // 公共计算属性
     const currentPath = computed(() => {
         const dirPath = route.params.dirPath;
-        if (!dirPath)
-            return '';
+        if (!dirPath) return '';
         return Array.isArray(dirPath) ? dirPath.join('/') + '/' : dirPath;
     });
     const breadcrumbItems = computed(() => {
-        if (!currentPath.value)
-            return [];
+        if (!currentPath.value) return [];
         return currentPath.value.split('/').filter(p => p);
     });
     const fileCount = computed(() => {
         return dataList.value.filter(item => item.size !== undefined).length;
     });
 
-    // 文件列表过滤 + 搜索防抖
-    const searchKeyword = ref('');
-    const debouncedSearchKeyword = ref('');
-    const updateSearchKeyword = debounce((value: string) => { debouncedSearchKeyword.value = value; }, 500);
-    watch(searchKeyword, (newKeyword) => { updateSearchKeyword(newKeyword); });
-    const filteredFileList = computed(() => {
-        const keyword = debouncedSearchKeyword.value.toLowerCase();
-        if (!keyword) return dataList.value;
-        return dataList.value.filter(item => item.name.toLowerCase().includes(keyword));
-    });
+    // 复制剪切板（惰性函数）
+    let copyCurrentPath = async (path: string) => {
+        if (navigator.clipboard) {
+            copyCurrentPath = async (path: string) => {
+                if (!currentPath.value) return;
+                await navigator.clipboard.writeText(path);
+                message.success('已复制路径：' + path);
+            };
+        } else {
+            copyCurrentPath = async (path: string) => {
+                if (!currentPath.value) return;
+                const textarea = document.createElement('textarea');
+                textarea.value = path;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                message.success('已复制路径：' + path);
+            };
+        }
+        copyCurrentPath(path);
+    };
 
+    // 加载目录
     const loadDirectory = async (path: string) => {
         try {
             dataList.value = await diskApi.getDirItems(userStore.user_id, path);
@@ -246,15 +235,31 @@
             if (listCacheStore.itemsCache.length > 0) {
                 listCacheStore.itemsCache.pop();
                 router.back(); // 回退到之前的目录
-            }
-            else {
+            } else {
                 router.push(`/`); // 回退到根目录
             }
         }
     };
 
+    // 搜索过滤
+    const searchKeyword = ref('');
+    const debouncedSearchKeyword = ref('');
+    const updateSearchKeyword = debounce((value: string) => {
+        debouncedSearchKeyword.value = value;
+    }, 500);
+    watch(searchKeyword, (newKeyword) => {
+        updateSearchKeyword(newKeyword);
+    });
+    const filteredFileList = computed(() => {
+        const keyword = debouncedSearchKeyword.value.toLowerCase();
+        if (!keyword) return dataList.value;
+        return dataList.value.filter(item => item.name.toLowerCase().includes(keyword));
+    });
+
+    // 导航
+    const refreshing = ref(false);
     const navigateTo = (target_path: string) => {
-        const path = currentPath.value.endsWith("/") ? currentPath.value.slice(0, -1) : currentPath.value;
+        const path = currentPath.value.endsWith('/') ? currentPath.value.slice(0, -1) : currentPath.value;
 
         if (target_path === path) {
             copyCurrentPath(path);
@@ -264,8 +269,21 @@
         if (target_path) router.push(`/${userStore.user.username}/${target_path}`);
         else router.push(`/${userStore.user.username}/`);
     };
+    const enterDir = (dirName: string) => {
+        const newPath = currentPath.value ? `${currentPath.value}${dirName}` : dirName;
+        router.push(`/${userStore.user.username}/${newPath}`);
+    };
+    const refreshFileList = throttle(async () => {
+        refreshing.value = true;
+        await loadDirectory(currentPath.value);
+        refreshing.value = false;
+        message.success('刷新成功');
+    }, 1500);
 
     // 新建目录
+    const showCreateDirDialog = ref(false);
+    const newDirName = ref('');
+    const createDirLoading = ref(false);
     const createDir = async () => {
         if (!newDirName.value.trim()) {
             message.warning('请输入目录名称');
@@ -281,39 +299,36 @@
             await loadDirectory(currentPath.value);
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
-        } finally {
-            createDirLoading.value = false;
         }
+        createDirLoading.value = false;
     };
 
     // 文件上传
     const chunkSize = parseInt(import.meta.env.VITE_UPLOAD_FILE_CHUNK_SIZE) * 1024 * 1024;
     const customUpload = async ({ file }: UploadCustomRequestOptions) => {
         // 清除文件列表
-        uploadRef.value?.clear()
+        uploadRef.value?.clear();
 
         const uploadFile = file.file;
-        if (!uploadFile) throw new Error("无效的文件");
+        if (!uploadFile) throw new Error('无效的文件');
 
         // 初始化上传会话
         try {
-            var originalPath = currentPath.value
-            var currentFileSHA256 = await calculateSHA256(uploadFile)
+            var originalPath = currentPath.value;
+            var currentFileSHA256 = await calculateSHA256(uploadFile);
             var initRes = await diskApi.createFile(userStore.user_id, originalPath, {
                 name: uploadFile.name,
                 size: uploadFile.size,
                 sha256: currentFileSHA256
             });
-        }
-        // 异常捕获
-        catch (error: unknown) {
+        } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
             return;
         }
 
         // 秒传
         if (diskApi.isDetailResponse(initRes)) {
-            const item = { name: uploadFile.name, progress: 50 }
+            const item = { name: uploadFile.name, progress: 50 };
             uploadStore.addUpload(item);
             await new Promise(resolve => setTimeout(resolve, 1000));
             uploadStore.updateProgress(item, 100);
@@ -333,13 +348,13 @@
             const item = { name: uploadFile.name, progress: Math.round(((initRes.chunk_index) / initRes.total_chunks) * 100) };
             uploadStore.addUpload(item);
 
-            const firstChunk = chunks[initRes.chunk_index - initRes.chunk_index] as Chunk
+            const firstChunk = chunks[initRes.chunk_index - initRes.chunk_index] as Chunk;
             const currentChunkMetadata: ChunkMetadata = {
-                'id': initRes.id,
-                'chunk_index': initRes.chunk_index,
-                'md5': firstChunk.md5,
-                'upload_file': firstChunk.blob
-            }
+                id: initRes.id,
+                chunk_index: initRes.chunk_index,
+                md5: firstChunk.md5,
+                upload_file: firstChunk.blob
+            };
 
             if (initRes.chunk_index === 0) {
                 message.info(`开始上传 ${uploadFile.name}`);
@@ -350,7 +365,7 @@
             let currentStatus = initRes.status;
             try {
                 while (currentStatus === Status.UPLOADING) {
-                    const res = await diskApi.chunk_upload(userStore.user_id, currentChunkMetadata)
+                    const res = await diskApi.chunk_upload(userStore.user_id, currentChunkMetadata);
 
                     // 更新进度
                     uploadStore.updateProgress(item, Math.round(((res.chunk_index) / res.total_chunks) * 100));
@@ -372,11 +387,11 @@
                         return;
                     }
 
-                    const currentChunk = chunks[res.chunk_index - initRes.chunk_index] as Chunk
-                    currentChunkMetadata.id = res.id
-                    currentChunkMetadata.chunk_index = res.chunk_index
-                    currentChunkMetadata.md5 = currentChunk?.md5
-                    currentChunkMetadata.upload_file = currentChunk?.blob
+                    const currentChunk = chunks[res.chunk_index - initRes.chunk_index] as Chunk;
+                    currentChunkMetadata.id = res.id;
+                    currentChunkMetadata.chunk_index = res.chunk_index;
+                    currentChunkMetadata.md5 = currentChunk?.md5;
+                    currentChunkMetadata.upload_file = currentChunk?.blob;
                 }
             } catch (error: unknown) {
                 message.error(error instanceof Error ? error.message : String(error));
@@ -387,36 +402,27 @@
 
     // 拖动上传
     const isDragOver = ref(false);
-    const handleDragOver = () => { isDragOver.value = true };
+    const handleDragOver = () => { isDragOver.value = true; };
     const handleDrop = (e: DragEvent) => {
         isDragOver.value = false;
 
         const files = Array.from(e.dataTransfer?.files ? e.dataTransfer.files : []);
         for (const file of files) {
-            customUpload({ file: { file } } as UploadCustomRequestOptions)
-        };
+            customUpload({ file: { file } } as UploadCustomRequestOptions);
+        }
     };
     const handleDragLeave = (e: DragEvent) => {
-        const target = e.currentTarget as HTMLElement
-        const related = e.relatedTarget as Node
+        const target = e.currentTarget as HTMLElement;
+        const related = e.relatedTarget as Node;
         if (!related || !target.contains(related)) {
             isDragOver.value = false;
         }
     };
 
-    // 刷新列表
-    const refreshFileList = throttle(async () => {
-        await loadDirectory(currentPath.value);
-        message.success('刷新成功');
-    }, 1500);
-
-    // 进入目录
-    const enterDir = (dirName: string) => {
-        const newPath = currentPath.value ? `${currentPath.value}${dirName}` : dirName;
-        router.push(`/${userStore.user.username}/${newPath}`);
-    };
-
-    // 文件详情
+    // 文件详情 / 下载
+    const showFileDetail = ref(false);
+    const selectedFile = ref<FileItem | null>(null);
+    const selectedFileRow = ref<DataItem | null>(null);
     const getFileDetail = async (row: DataItem) => {
         if (row.size && row.sha256) {
             selectedFile.value = { ...row } as FileItem;
@@ -424,27 +430,21 @@
             showFileDetail.value = true;
         }
     };
-
     const handleRowDblclick = (row: DataItem) => {
-        if (row.size)
-            getFileDetail(row);
-        else
-            enterDir(row.name)
+        if (row.size) getFileDetail(row);
+        else enterDir(row.name);
     };
-
-    // 文件下载
     const handleDownload = throttle(async (fileName: string) => {
         if (!isTokenValid(userStore.access_token)) {
             const access_token = await userStore.refreshToken();
             if (userStore.refreshPromise != null) {
                 localStorage.setItem('access_token', userStore.access_token = access_token);
-                userStore.refreshPromise = null
+                userStore.refreshPromise = null;
             }
         }
 
         diskApi.downloadFile(userStore.user_id, currentPath.value, fileName, userStore.access_token);
     }, 200);
-
     const downloadSelectedFile = async () => {
         if (selectedFileRow.value) {
             await handleDownload(selectedFileRow.value.name);
@@ -452,7 +452,7 @@
         }
     };
 
-    // 文件重命名
+    // 重命名
     const handleRename = async (row: DataItem, newName: string) => {
         const oldName = row.name;
         row.name = newName;
@@ -471,49 +471,25 @@
         }
     };
 
-    // 复制剪切板（惰性函数）
-    let copyCurrentPath = async (path: string) => {
-        if (navigator.clipboard) {
-            copyCurrentPath = async (path: string) => {
-                if (!currentPath.value) return;
-
-                await navigator.clipboard.writeText(path);
-                message.success('已复制路径：' + path);
-            }
-        } else {
-            copyCurrentPath = async (path: string) => {
-                if (!currentPath.value) return;
-
-                // 降级方案
-                const textarea = document.createElement('textarea');
-                textarea.value = path;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                message.success('已复制路径：' + path);
-            }
-        }
-        copyCurrentPath(path);
-    };
-
-    // 打开移动对话框
+    // 移动
+    const isMoving = ref(false);
+    const originalPath = ref('');
+    const moveItem = ref({ isFile: Boolean(), name: String() });
+    const moveLoading = ref(false);
     const handleMove = (row: DataItem) => {
-        targetPath.value = '';
-        showMoveDialog.value = true;
+        originalPath.value = currentPath.value;
+        isMoving.value = true;
         moveItem.value = {
             isFile: Boolean(row.size),
             name: row.name
-        }
+        };
     };
-
-    // 执行移动
     const confirmMove = async () => {
         moveLoading.value = true;
-        let target_path = `${userStore.user_id}/${targetPath.value}`;
-        let original_path = `${userStore.user_id}/${currentPath.value}`;
-        target_path = target_path.endsWith("/") ? target_path.slice(0, -1) : target_path;
-        original_path = original_path.endsWith("/") ? original_path.slice(0, -1) : original_path;
+        let original_path = `${userStore.user_id}/${originalPath.value}`;
+        let target_path = `${userStore.user_id}/${currentPath.value}`;
+        target_path = target_path.endsWith('/') ? target_path.slice(0, -1) : target_path;
+        original_path = original_path.endsWith('/') ? original_path.slice(0, -1) : original_path;
 
         try {
             const res = moveItem.value?.isFile
@@ -523,18 +499,18 @@
             listCacheStore.clearCache();
             await loadDirectory(currentPath.value);
             message.success(res.detail);
-            showMoveDialog.value = false;
+            isMoving.value = false;
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
-        } finally {
-            moveLoading.value = false;
         }
+        moveLoading.value = false;
     };
 
+    // 删除
     const handleDelete = (row: DataItem) => {
         dialog.warning({
             title: '确认删除',
-            content: `确定要删除${row.size ? "文件" : "目录"} ${row.name} 吗？`,
+            content: `确定要删除${row.size ? '文件' : '目录'} ${row.name} 吗？`,
             positiveText: '确定',
             negativeText: '取消',
             onPositiveClick: async () => {
@@ -542,8 +518,7 @@
                     if (row.size) {
                         const res = await diskApi.deleteFile(userStore.user_id, currentPath.value, row.name);
                         message.success(res.detail);
-                    }
-                    else {
+                    } else {
                         const res = await diskApi.deleteDir(userStore.user_id, currentPath.value, row.name);
                         message.success(res.detail);
                     }
@@ -556,16 +531,16 @@
         });
     };
 
+    // 用户设置 / 退出
     const handleLogoutPositiveClick = async () => {
         const res = await userStore.logout();
         listCacheStore.clearCache();
         router.push('/login');
         message.success(res.detail);
-    }
-
+    };
     const handleUserMenuSelect = (key: string) => {
         if (key === 'logout') {
-            live2dAlert("もう離れるの")
+            live2dAlert('もう離れるの');
 
             dialog.warning({
                 title: '确认退出',
@@ -720,7 +695,6 @@
 
         .toolbar-actions>* {
             flex: 1;
-            /* 三个按钮等宽均匀分布 */
         }
 
         .toolbar-search {
@@ -801,7 +775,6 @@
     .sha256 {
         font-family: monospace;
         line-height: 20px;
-        /* 或具体数值，如 20px */
         font-size: 12px;
         color: #00CC66;
     }

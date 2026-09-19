@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { userApi, type UserProfile } from '@/api/user';
+import { userApi, type UserInfo } from '@/api/user';
 
 const isTokenValid = (token: string) => {
     if (!token) return false;
@@ -31,7 +31,7 @@ const getUserIdFromToken = (token: string): string => {
 const useUserStore = defineStore('user', () => {
     const user_id = ref(localStorage.getItem('user_id') || '');
     const access_token = ref(localStorage.getItem('access_token') || '');
-    const user = ref<UserProfile>({} as UserProfile);
+    const user = ref<UserInfo>({} as UserInfo);
     const refreshPromise = ref<Promise<string> | null>(null);
     const avatarBlobUrl = ref('');
 
@@ -42,13 +42,13 @@ const useUserStore = defineStore('user', () => {
     const login = async (username: string, password: string) => {
         const res = await userApi.login({ username, password });
         user.value = res.user;
-        localStorage.setItem('user_id', getUserIdFromToken(res.access_token));
+        localStorage.setItem('user_id', user_id.value = getUserIdFromToken(res.access_token));
         localStorage.setItem('access_token', access_token.value = res.access_token);
     };
 
     const fetchUser = async () => {
-        user.value = await userApi.getUserProfile(user_id.value);
-        if (!avatarBlobUrl) { await loadAvatar(); }
+        user.value = await userApi.getUserInfo(user_id.value);
+        if (!avatarBlobUrl.value) { await loadAvatar(); }
     };
 
     const loadAvatar = async () => {
@@ -64,9 +64,7 @@ const useUserStore = defineStore('user', () => {
     };
 
     const revokeAvatarUrl = () => {
-        if (avatarBlobUrl.value && avatarBlobUrl.value.startsWith('blob:')) {
-            URL.revokeObjectURL(avatarBlobUrl.value);
-        }
+        if (avatarBlobUrl.value) { URL.revokeObjectURL(avatarBlobUrl.value); }
         avatarBlobUrl.value = '';
     };
 
@@ -76,7 +74,7 @@ const useUserStore = defineStore('user', () => {
     };
 
     const logout = async () => {
-        user.value = {} as UserProfile;
+        user.value = {} as UserInfo;
         localStorage.removeItem('user_id');
         localStorage.removeItem('access_token');
 
