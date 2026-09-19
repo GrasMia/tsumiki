@@ -8,7 +8,7 @@ from app.models import User
 from app.db import get_db_async, get_db_async_auto
 from app.services import UserService
 from app.core.dependencies import get_current_user_id
-from app.schemas import UpdatePasswordParams, UserProfile
+from app.schemas import UpdatePasswordParams, UserInfo
 from app.utils import validate_password, validate_username
 from app.core.security import verify_password, get_password_hash
 from app.exceptions import user_exceptions, email_exceptions, pwd_exceptions
@@ -16,8 +16,8 @@ from app.exceptions import user_exceptions, email_exceptions, pwd_exceptions
 router = APIRouter(tags=["users"])
 
 
-@router.get("/{user_id}/info", response_model=UserProfile)
-async def get_user_profile(
+@router.get("/{user_id}/info", response_model=UserInfo)
+async def get_user_info(
     user_id: int = Path(...),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async_auto),

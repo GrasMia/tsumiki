@@ -62,12 +62,14 @@
                             <n-avatar :size="120" :src="userStore.avatarBlobUrl" object-fit="cover" />
                         </div>
                         <n-upload ref="uploadRef" :show-file-list="false" :multiple="false"
-                            :custom-request="customUpload" accept="image/*" >
-                            <n-button type="primary" style="margin-right: 0.75rem;">
+                            :custom-request="customUpload" accept="image/*">
+                            <n-button type="primary" style="margin-right: 0.75rem;" :loading="uploading"
+                                :disabled="resetting">
                                 <template #icon><n-icon><cloud-upload-outline /></n-icon></template>
                                 上传头像
                             </n-button>
-                            <n-button type="tertiary" @click.stop="resetAvatar">
+                            <n-button type="tertiary" @click.stop="resetAvatar" :loading="resetting"
+                                :disabled="uploading">
                                 <template #icon><n-icon><cloud-upload-outline /></n-icon></template>
                                 重置头像
                             </n-button>
@@ -86,7 +88,7 @@
         NCard, NTabs, NIcon, NTabPane, NForm, NFormItem, NInput, NButton, NAvatar, NUpload, useMessage, type FormRules,
         type UploadCustomRequestOptions
     } from 'naive-ui';
-    import { CloudUploadOutline, TrashOutline } from '@vicons/ionicons5';
+    import { CloudUploadOutline } from '@vicons/ionicons5';
     import { useUserStore, userApi } from '@/stores/user';
     import { preventSpace } from '@/utils/format';
 
@@ -94,11 +96,14 @@
     const message = useMessage();
     const userStore = useUserStore();
 
+
     const profileFormRef = useTemplateRef('profileFormRef');
     const passwordFormRef = useTemplateRef('passwordFormRef');
     const uploadRef = useTemplateRef('uploadRef');
     const updateLoading = ref(false);
     const passwordLoading = ref(false);
+    const uploading = ref(false);
+    const resetting = ref(false);
 
     const profileForm = reactive({
         new_username: '',
@@ -206,9 +211,8 @@
             router.push('/login');
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
-        } finally {
-            passwordLoading.value = false;
         }
+        passwordLoading.value = false;
     };
 
     // 头像上传
@@ -218,6 +222,7 @@
         const uploadFile = file.file;
         if (!uploadFile) throw new Error("无效的头像文件");
 
+        uploading.value = true;
         try {
             const res = await userApi.modifyAvatar(userStore.user_id, uploadFile);
             await userStore.loadAvatar();
@@ -225,10 +230,12 @@
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
         }
+        uploading.value = false;
     };
 
     // 重置头像
     const resetAvatar = async () => {
+        resetting.value = true;
         try {
             const res = await userApi.resetAvatar(userStore.user_id);
             await userStore.loadAvatar();
@@ -236,6 +243,7 @@
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
         }
+        resetting.value = false;
     }
 </script>
 

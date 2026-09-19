@@ -24,14 +24,14 @@
                 </n-form-item>
 
                 <n-form-item>
-                    <n-button type="primary" size="large" block :loading="loading" @click="handleRegister">
+                    <n-button type="primary" size="large" block :loading="registering" @click="handleRegister">
                         注册
                     </n-button>
                 </n-form-item>
 
                 <div style="text-align: center">
                     <n-text depth="3">已有账号？</n-text>
-                    <n-button text type="primary" @click="goToLogin">
+                    <n-button text type="primary" @click="goToLogin" :disabled="registering">
                         立即登录
                     </n-button>
                 </div>
@@ -53,7 +53,7 @@
     const userStore = useUserStore();
 
     const formRef = useTemplateRef('formRef');
-    const loading = ref(false);
+    const registering = ref(false);
 
     const formData = reactive({
         username: '',
@@ -86,7 +86,7 @@
             { min: 8, message: '密码长度不能少于8位', trigger: 'blur' },
         ],
         confirmPassword: [
-            { validator: validateConfirmPassword, trigger: 'blur' },
+            { required: true, validator: validateConfirmPassword, trigger: 'blur' },
         ],
     };
 
@@ -97,16 +97,15 @@
             return;
         }
 
-        loading.value = true;
+        registering.value = true;
         try {
             const res = await userStore.register(formData.username, formData.email, formData.password);
             message.success(res.detail);
             router.push('/login');
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
-        } finally {
-            loading.value = false;
         }
+        registering.value = false;
     };
 
     const goToLogin = () => {

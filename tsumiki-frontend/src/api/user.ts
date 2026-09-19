@@ -1,4 +1,4 @@
-import { http, authHttp } from './index';
+import { authHttp, http } from './index';
 
 export interface LoginParams {
     username: string
@@ -9,7 +9,7 @@ export interface RegisterParams extends LoginParams {
     email: string
 }
 
-export interface UserProfile {
+export interface UserInfo {
     username: string
     email: string
     total_space: number
@@ -18,7 +18,7 @@ export interface UserProfile {
 }
 
 export interface AuthResponse {
-    user: UserProfile
+    user: UserInfo
     access_token: string
 }
 
@@ -48,16 +48,16 @@ export const userApi = {
         });
     },
 
-    refresh: () => {
-        return authHttp<string>(`/auth/refresh`, { method: 'POST' });
+    refresh: (access_token: string) => {
+        return authHttp<string>(`/auth/refresh`, { method: 'POST', headers: { Authorization: access_token } });
     },
 
     logout: () => {
         return http<DetailResponse>('/auth/logout', { method: 'POST' });
     },
 
-    getUserProfile: (user_id: string) => {
-        return http<UserProfile>(`/users/${user_id}/info`, { method: 'GET' });
+    getUserInfo: (user_id: string) => {
+        return http<UserInfo>(`/users/${user_id}/info`, { method: 'GET' });
     },
 
     modifyUsername: (user_id: string, new_name: string) => {

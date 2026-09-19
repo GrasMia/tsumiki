@@ -8,7 +8,7 @@ class RegisterParams(BaseModel):
     password: str = Field(default="", min_length=8, max_length=24)
 
 
-class UserProfile(BaseModel):
+class UserInfo(BaseModel):
     username: str = Field(..., min_length=5, max_length=20)
     email: EmailStr = Field("user@tsumiki.com")
     total_space: int
@@ -19,7 +19,7 @@ class UserProfile(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    user: UserProfile
+    user: UserInfo
     access_token: str
 
     model_config = ConfigDict(from_attributes=True)

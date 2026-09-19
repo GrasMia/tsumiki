@@ -2,6 +2,17 @@ import { ofetch, $fetch } from 'ofetch';
 import { isTokenValid, useUserStore } from "@/stores/user"
 
 // 创建 ofetch 实例
+export const authHttp = ofetch.create({
+    baseURL: '',
+    timeout: 30000,
+
+    async onResponseError({ request, options, response }) {
+        const data = response._data;
+        const message = data?.detail || String(data);
+        throw new Error(message);
+    }
+});
+
 export const http = ofetch.create({
     baseURL: '',
     timeout: 30000,
@@ -39,26 +50,8 @@ export const http = ofetch.create({
         }
 
         // 其他错误
-        const message = data?.detail || '请求失败';
+        const message = data?.detail || String(data);
         throw new Error(message);
     }
 });
 
-export const authHttp = ofetch.create({
-    baseURL: '',
-    timeout: 30000,
-    headers: { 'Content-Type': 'application/json' },
-
-    async onRequest({ request, options, response }) {
-        const userStore = useUserStore();
-        if (userStore.access_token) {
-            options.headers.append("Authorization", userStore.access_token);
-        }
-    },
-
-    async onResponseError({ request, options, response }) {
-        const data = response._data;
-        const message = data?.detail || '请求失败';
-        throw new Error(message);
-    }
-});

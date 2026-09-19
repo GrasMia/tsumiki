@@ -33,6 +33,5 @@ USER_INCONSISTENT = HTTPException(
 
 USERNAME_ALREADY_EXISTS = HTTPException(
     status_code=status.HTTP_403_FORBIDDEN,
-    detail="用户名已被使用",
+    detail="用户名已被注册",
 )
-
