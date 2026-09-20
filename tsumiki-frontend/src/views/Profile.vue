@@ -172,8 +172,7 @@
                 // 刷新URL
                 router.push(`/${userStore.user.username}/profile`);
                 message.success(res.detail);
-            }
-            catch (error: unknown) {
+            } catch (error: unknown) {
                 message.error(error instanceof Error ? error.message : String(error));
             }
         }
@@ -183,8 +182,7 @@
                 userStore.user.email = profileForm.new_email;
                 profileForm.new_email = "";
                 message.success(res.detail);
-            }
-            catch (error: unknown) {
+            } catch (error: unknown) {
                 message.error(error instanceof Error ? error.message : String(error));
             }
         }

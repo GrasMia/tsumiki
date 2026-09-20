@@ -13,7 +13,6 @@ class UserInfo(BaseModel):
     email: EmailStr = Field("user@tsumiki.com")
     total_space: int
     used_space: int
-    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

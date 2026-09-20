@@ -73,8 +73,8 @@
         try {
             await userStore.login(formData.value.username, formData.value.password);
             live2dAlert('ログイン成功しました');
-            message.success('登录成功');
             router.push(`/`);
+            message.success('登录成功');
         } catch (error: unknown) {
             live2dAlert('ログイン失敗しました');
             message.error(error instanceof Error ? error.message : String(error));

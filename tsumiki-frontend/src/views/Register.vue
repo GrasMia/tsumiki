@@ -100,8 +100,8 @@
         registering.value = true;
         try {
             const res = await userStore.register(formData.username, formData.email, formData.password);
-            message.success(res.detail);
             router.push('/login');
+            message.success(res.detail);
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
         }

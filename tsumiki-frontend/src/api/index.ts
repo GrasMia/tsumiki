@@ -23,16 +23,13 @@ export const http = ofetch.create({
         // access_token 不存在或已过期
         if (!isTokenValid(userStore.access_token)) {
             try {
-                const access_token = await userStore.refreshToken();
-                if (userStore.refreshPromise != null) {
-                    localStorage.setItem('access_token', userStore.access_token = access_token);
-                    userStore.refreshPromise = null
-                }
+                await userStore.refreshToken();
             }
+            // refresh_token 失效
             catch (e: unknown) {
-                userStore.logout();
+                userStore.logout('clear');
                 window.location.href = '/login';
-                throw e
+                throw e;
             }
         }
 

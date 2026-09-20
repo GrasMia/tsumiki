@@ -113,10 +113,9 @@ async def refresh_token(
 @router.post("/logout")
 async def logout(
     response: Response,
-    access_token: str = Depends(get_access_token),
+    current_user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_async_auto),
 ):
-    current_user_id = get_current_user_id(access_token)
     current_user = await db.scalar(select(User).where(User.id == current_user_id))
     if not current_user:
         raise USER_NOT_FOUND

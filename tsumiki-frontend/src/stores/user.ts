@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { userApi, type UserInfo } from '@/api/user';
+import { useListCacheStore } from '@/stores/listCache';
 
 const isTokenValid = (token: string) => {
     if (!token) return false;
@@ -32,8 +33,10 @@ const useUserStore = defineStore('user', () => {
     const user_id = ref(localStorage.getItem('user_id') || '');
     const access_token = ref(localStorage.getItem('access_token') || '');
     const user = ref<UserInfo>({} as UserInfo);
-    const refreshPromise = ref<Promise<string> | null>(null);
     const avatarBlobUrl = ref('');
+    const fetchPromise = ref<Promise<UserInfo> | null>(null);
+    const refreshPromise = ref<Promise<string> | null>(null);
+
 
     const register = async (username: string, email: string, password: string) => {
         return await userApi.register({ username, email, password });
@@ -44,10 +47,13 @@ const useUserStore = defineStore('user', () => {
         user.value = res.user;
         localStorage.setItem('user_id', user_id.value = getUserIdFromToken(res.access_token));
         localStorage.setItem('access_token', access_token.value = res.access_token);
+        loadAvatar();
     };
 
     const fetchUser = async () => {
-        user.value = await userApi.getUserInfo(user_id.value);
+        if (fetchPromise.value) { return fetchPromise.value }
+        user.value = await (fetchPromise.value = userApi.getUserInfo(user_id.value));
+        fetchPromise.value = null;
         if (!avatarBlobUrl.value) { await loadAvatar(); }
     };
 
@@ -68,27 +74,38 @@ const useUserStore = defineStore('user', () => {
         avatarBlobUrl.value = '';
     };
 
-    const refreshToken = () => {
+    const refreshToken = async () => {
         if (refreshPromise.value) return refreshPromise.value;
-        return refreshPromise.value = userApi.refresh(access_token.value);
+        access_token.value = await (refreshPromise.value = userApi.refresh(access_token.value));
+        localStorage.setItem('access_token', access_token.value);
+        refreshPromise.value = null;
     };
 
-    const logout = async () => {
-        user.value = {} as UserInfo;
-        localStorage.removeItem('user_id');
-        localStorage.removeItem('access_token');
-
-        revokeAvatarUrl();
-
-        return await userApi.logout();
+    const logout = async (mode: 'logout' | 'clear' = 'logout') => {
+        try {
+            let res: Awaited<ReturnType<typeof userApi.logout>> | undefined = undefined;
+            if (mode === 'logout') {
+                res = await userApi.logout(access_token.value);
+            }
+            user_id.value = access_token.value = '';
+            user.value = {} as UserInfo;
+            revokeAvatarUrl();
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('access_token');
+            useListCacheStore().clearCache();
+            return res;
+        } catch (error: unknown) {
+            throw error;
+        }
     };
 
     return {
         user_id,
         access_token,
         user,
-        refreshPromise,
         avatarBlobUrl,
+        fetchPromise,
+        refreshPromise,
         register,
         login,
         fetchUser,

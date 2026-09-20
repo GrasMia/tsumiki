@@ -533,10 +533,13 @@
 
     // 用户设置 / 退出
     const handleLogoutPositiveClick = async () => {
-        const res = await userStore.logout();
-        listCacheStore.clearCache();
-        router.push('/login');
-        message.success(res.detail);
+        try {
+            const res = await userStore.logout();
+            router.push('/login');
+            message.success(res ? res.detail : '');
+        } catch (error: unknown) {
+            message.error(error instanceof Error ? error.message : String(error));
+        }
     };
     const handleUserMenuSelect = (key: string) => {
         if (key === 'logout') {

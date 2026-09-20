@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import select, insert, update, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 

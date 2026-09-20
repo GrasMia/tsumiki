@@ -1,6 +1,6 @@
-# from sqlalchemy import ForeignKey, String, Integer, DateTime
+# from sqlalchemy import Integer, String, DateTime, ForeignKey, func
 # from sqlalchemy.orm import Mapped, mapped_column, relationship
-# from datetime import datetime, timezone
+# from datetime import datetime, timedelta, timezone
 # from app.models import Base
 # from typing import TYPE_CHECKING
 
@@ -15,8 +15,8 @@
 #     name: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
 #     size: Mapped[int] = mapped_column(Integer, nullable=False)
 #     original_path: Mapped[str] = mapped_column(String(255), nullable=False)
-#     deleted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), nullable=False)
-#     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+#     deleted_at: Mapped[datetime] = mapped_column(DateTime, insert_default=func.now(), nullable=False)
+#     expires_at = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc) + timedelta(days=EXPIRES_DAYS))
 
 #     # 外键
 #     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False, index=True)

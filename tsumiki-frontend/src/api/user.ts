@@ -14,7 +14,6 @@ export interface UserInfo {
     email: string
     total_space: number
     used_space: number
-    created_at: string
 }
 
 export interface AuthResponse {
@@ -52,8 +51,8 @@ export const userApi = {
         return authHttp<string>(`/auth/refresh`, { method: 'POST', headers: { Authorization: access_token } });
     },
 
-    logout: () => {
-        return http<DetailResponse>('/auth/logout', { method: 'POST' });
+    logout: (access_token: string) => {
+        return authHttp<DetailResponse>('/auth/logout', { method: 'POST', headers: { Authorization: access_token } });
     },
 
     getUserInfo: (user_id: string) => {

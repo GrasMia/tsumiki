@@ -11,11 +11,11 @@ from app.exceptions import INVALID_CREDENTIALS, USER_INCONSISTENT
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
-def get_access_token(access_token: str = Security(oauth2_scheme)) -> str:
-    if not access_token:
+def get_access_token(token: str = Security(oauth2_scheme)) -> str:
+    if not token:
         raise INVALID_CREDENTIALS
 
-    return access_token
+    return token
 
 
 def get_current_user_id(token: str = Security(oauth2_scheme)) -> int:
