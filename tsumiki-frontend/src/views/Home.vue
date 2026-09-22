@@ -436,10 +436,13 @@
     };
     const handleDownload = throttle(async (fileName: string) => {
         if (!isTokenValid(userStore.access_token)) {
-            const access_token = await userStore.refreshToken();
-            if (userStore.refreshPromise != null) {
-                localStorage.setItem('access_token', userStore.access_token = access_token);
-                userStore.refreshPromise = null;
+            try {
+                await userStore.refreshToken();
+            }
+            catch (e: unknown) {
+                userStore.logout('clear');
+                message.error(e instanceof Error ? e.message : String(e));
+                setTimeout(() => { window.location.href = '/login' }, 1500);
             }
         }
 

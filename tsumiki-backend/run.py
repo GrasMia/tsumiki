@@ -17,7 +17,16 @@ if __name__ == "__main__":
         # 开发模式
         uvicorn.run("app.main:app", host="localhost", http="httptools", reload=False)
     else:
+        import sys
         from app import app
 
         # 生产模式
-        uvicorn.run(app, host="localhost", http="httptools", reload=False)
+        uvicorn.run(
+            app,
+            host="localhost",
+            http="httptools",
+            loop="uvloop" if sys.platform != "win32" else "auto",
+            proxy_headers=True,
+            forwarded_allow_ips=["127.0.0.1", "::1"],
+            reload=False,
+        )

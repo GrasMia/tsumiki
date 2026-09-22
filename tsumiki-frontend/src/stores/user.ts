@@ -76,9 +76,12 @@ const useUserStore = defineStore('user', () => {
 
     const refreshToken = async () => {
         if (refreshPromise.value) return refreshPromise.value;
-        access_token.value = await (refreshPromise.value = userApi.refresh(access_token.value));
-        localStorage.setItem('access_token', access_token.value);
-        refreshPromise.value = null;
+        try {
+            access_token.value = await (refreshPromise.value = userApi.refresh(access_token.value));
+            localStorage.setItem('access_token', access_token.value);
+        } finally {
+            refreshPromise.value = null;
+        }
     };
 
     const logout = async (mode: 'logout' | 'clear' = 'logout') => {

@@ -28,7 +28,7 @@ export const http = ofetch.create({
             // refresh_token 失效
             catch (e: unknown) {
                 userStore.logout('clear');
-                window.location.href = '/login';
+                setTimeout(() => { window.location.href = '/login' }, 1500);
                 throw e;
             }
         }
