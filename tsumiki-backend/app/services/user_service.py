@@ -2,10 +2,12 @@ from fastapi import HTTPException, status, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from PIL import Image
 import aiofiles
 import asyncio
-import os
+import io
 
 from app.models import User
 from app.config import settings
@@ -14,6 +16,9 @@ from app.exceptions import USER_NOT_FOUND
 # 头像存储根目录
 AVATAR_PATH = Path(settings.LOCAL_AVATAR_PATH)
 AVATAR_PATH.mkdir(exist_ok=True)
+
+# 线程池
+executor = ThreadPoolExecutor(max_workers=4)
 
 
 class UserService:
@@ -24,40 +29,36 @@ class UserService:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "头像名必须存在且不能为空")
         if not upload_file.size or upload_file.size <= 0:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "错误的头像文件")
-        if upload_file.size > 2 * 1024 * 1024:  # 1MB
+        if upload_file.size > 2 * 1024 * 1024:  # 2MB
             raise HTTPException(status_code=400, detail="头像过大，最大支持 2MB")
 
         current_user = await db.scalar(select(User).where(User.id == current_user_id).with_for_update())
         if not current_user:
             raise USER_NOT_FOUND
 
-        # 验证文件类型
-        allowed_types = ["image/jpg", "image/jpeg", "image/png", "image/webp"]
-        if upload_file.content_type not in allowed_types:
-            raise HTTPException(status_code=400, detail="头像只支持 JPG、JEPG、PNG、WEBP 格式")
+        physical_path = AVATAR_PATH
 
-        # 确定文件名
-        file_ext = os.path.splitext(upload_file.filename)[1].lower()
-        if file_ext not in [".jpg", ".jpeg", ".png", ".webp"]:
-            file_ext = ".png"
-        avatar_filename = f"{current_user.id}{file_ext}"
-        physical_path = AVATAR_PATH / avatar_filename
-
-        # 读取并保存文件
         try:
             avatar_data = await asyncio.wait_for(upload_file.read(), timeout=30)
-            # 验证实际读取大小
+
             if len(avatar_data) != upload_file.size:
                 raise Exception("文件读取不完整")
-            # 写入文件
+
+            # 压缩图片
+            loop = asyncio.get_event_loop()  # uvloop 下返回的是 uvloop 的 loop
+            avatar_data, img_format = await loop.run_in_executor(executor, UserService.compress_image, avatar_data)
+
+            avatar_filename = f"{current_user.id}{img_format}"
+            physical_path = AVATAR_PATH / avatar_filename
+
             async with aiofiles.open(physical_path, "wb") as f:
                 await f.write(avatar_data)
         except asyncio.TimeoutError:
-            if physical_path.exists():
+            if physical_path.is_file():  # is_file 会判断 存在 and 是否是文件 两个条件
                 physical_path.unlink()
             raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, "上传超时")
         except Exception as e:
-            if physical_path.exists():
+            if physical_path.is_file():
                 physical_path.unlink()
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"上传失败: {e}")
 
@@ -70,6 +71,36 @@ class UserService:
         # 更新数据库
         current_user.avatar = avatar_filename
         await db.commit()
+
+    @staticmethod
+    def compress_image(avatar_data: bytes, max_size: int = 512) -> tuple[bytes, str]:
+        # 验证文件类型
+        img = Image.open(io.BytesIO(avatar_data))
+        if not img.format:
+            raise Exception("未知的图片格式")
+        if img.format not in ["JPEG", "PNG", "WEBP"]:
+            raise Exception("头像只支持 JPEG、PNG、WEBP 格式")
+
+        # 缩放（所有格式通用）
+        img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+        output = io.BytesIO()
+
+        if img.format == "JPEG":
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")  # JPEG 必须转 RGB（去掉透明通道）
+            img.save(output, format="JPEG", quality=85, optimize=True)
+            ext = ".jpg"
+
+        elif img.format == "PNG":
+            img.save(output, format="PNG", optimize=True)
+            ext = ".png"
+
+        else:
+            img.save(output, format="WEBP", quality=85)
+            ext = ".webp"
+
+        return output.getvalue(), ext
 
     @staticmethod
     async def get_avatar_path(avatar: str | None, db: AsyncSession) -> Path:

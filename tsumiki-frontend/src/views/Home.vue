@@ -225,7 +225,7 @@
     // 加载目录
     const loadDirectory = async (path: string) => {
         try {
-            dataList.value = await diskApi.getDirItems(userStore.user_id, path);
+            dataList.value = (await diskApi.getDirItems(userStore.user_id, path)).items;
         } catch (e: unknown) {
             dataList.value = [];
             message.error(e instanceof Error ? e.message : String(e));
@@ -457,20 +457,18 @@
 
     // 重命名
     const handleRename = async (row: DataItem, newName: string) => {
-        const oldName = row.name;
-        row.name = newName;
-
         try {
             if (row.size) {
-                const res = await diskApi.renameFile(userStore.user_id, currentPath.value, oldName, newName);
+                const res = await diskApi.renameFile(userStore.user_id, currentPath.value, row.name, newName);
                 message.success(res.detail);
             } else {
-                const res = await diskApi.renameDir(userStore.user_id, currentPath.value, oldName, newName);
+                const res = await diskApi.renameDir(userStore.user_id, currentPath.value, row.name, newName);
                 message.success(res.detail);
             }
+            row.name = newName;
+            row.modified_at = new Date().toLocaleString();
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : String(error));
-            row.name = oldName;
         }
     };
 

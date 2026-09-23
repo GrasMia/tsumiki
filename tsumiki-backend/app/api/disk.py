@@ -40,7 +40,7 @@ async def get_dir_items(
     dirs = [DirItem.model_validate(dir) for dir in current_dir.children]
     files = [FileItem.model_validate(file) for file in current_dir.files]
 
-    return dirs + files
+    return {"items": dirs + files}
 
 
 @router.post("/{dir_path:path}/")

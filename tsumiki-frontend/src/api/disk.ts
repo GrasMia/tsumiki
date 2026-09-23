@@ -2,8 +2,8 @@ import { http } from './index';
 
 interface BaseItem {
     name: string
-    created_at: Date
-    modified_at: Date
+    created_at: string
+    modified_at: string
 }
 
 export interface DataItem extends BaseItem {
@@ -51,7 +51,7 @@ export const diskApi = {
         const url = path
             ? `/disk/${user_id}/${path}`
             : `/disk/${user_id}/`;
-        return http<Array<DataItem>>(url, { method: 'GET' });
+        return http<{ items: Array<DataItem> }>(url, { method: 'GET' });
     },
 
     createDir: (user_id: string, path: string = '', new_dir_name: string) => {
