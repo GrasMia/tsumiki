@@ -28,7 +28,7 @@ class FileService:
         if not current_user:
             raise USER_NOT_FOUND
         if current_user.used_space + file_metadata.size > current_user.total_space:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "空间不足")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "可用空间不足")
 
         # 更新用户空间
         current_user.used_space += file_metadata.size
