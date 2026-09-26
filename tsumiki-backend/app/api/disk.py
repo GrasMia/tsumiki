@@ -4,10 +4,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_db_async, get_db_async_auto
+from app.config import settings
 from app.models import Dir, Status
-from app.schemas import DirItem, FileItem, FileMetadata, ChunkInfo, ChunkMetadata
+from app.db import get_db_async, get_db_async_auto
 from app.services import DirService, FileService, StorageService
+from app.schemas import DirItem, FileItem, FileMetadata, ChunkInfo, ChunkMetadata
 from app.core.dependencies import get_current_user_id
 from app.exceptions import DIR_NOT_FOUND, USER_INCONSISTENT
 from app.utils import validate_dir_name, validate_dir_path, validate_file_name
@@ -71,8 +72,8 @@ async def create(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "根目录不允许上传文件")
     elif file_metadata and not new_dir_name:
         file_metadata.name = validate_file_name(file_metadata.name)
-        if file_metadata.size > 200 * 1024 * 1024:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "文件过大，最大支持 200MB")
+        if file_metadata.size > settings.FILE_MAX_MB_SIZE * 1024 * 1024:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"文件过大，最大支持 {settings.FILE_MAX_MB_SIZE}MB")
 
         existing_storage = await StorageService.verify_storage(file_metadata, db)
 

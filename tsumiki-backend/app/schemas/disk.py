@@ -32,7 +32,7 @@ class FileItem(BaseModel):
 
 class FileMetadata(BaseModel):
     name: str
-    size: int = Field(gt=0)
+    size: int = Field(gt=0, lt=2**31 - 1)
     sha256: str = Field(min_length=64, max_length=64)
 
 

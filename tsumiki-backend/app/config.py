@@ -7,18 +7,19 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     SECRET_KEY: str = "default_secret_key"
     ALGORITHM: str = "HS256"
-
     ACCESS_TOKEN_PREFIX: str = "Bearer"
+    DATABASE_URL: str = "postgresql://postgres@localhost/postgres"
+
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 15
-
-    DATABASE_URL: str = "postgresql://postgres@localhost/postgres"
+    UPLOAD_FILE_CHUNK_SIZE: int = 5
+    TRASHES_EXPIRES_DAYS: int = 10
+    AVAILABLE_GB_SPACE: int = 20
+    FILE_MAX_MB_SIZE: int = 500
 
     LOCAL_STORAGE_PATH: str = "./wwwroot/files"
     LOCAL_AVATAR_PATH: str = "./wwwroot/avatars"
     LOCAL_STATIC_PATH: str = "./wwwroot/static"
-
-    UPLOAD_FILE_CHUNK_SIZE: int = 5
 
     # pydantic_settings 类属性上的默认值（如 DEBUG: bool = True）是备用默认值
     model_config = SettingsConfigDict(

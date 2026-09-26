@@ -1,8 +1,10 @@
-from fastapi import UploadFile, HTTPException, status
+from fastapi import HTTPException, status, UploadFile
+from fastapi.logger import logger
 from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import aiofiles
 import hashlib
@@ -10,7 +12,7 @@ import asyncio
 import math
 
 from app.schemas import FileMetadata, ChunkMetadata, ChunkInfo
-from app.db import AsyncSessionLocal
+from app.db import AsyncSessionLocal, get_db_async_auto
 from app.models import Storage, Status
 from app.config import settings
 
@@ -53,7 +55,6 @@ class StorageService:
             if not new_storage:
                 raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "存储记录创建失败")
 
-            asyncio.create_task(StorageService.delayed_cleanup(new_storage.id))
             await db.commit()
 
             return ChunkInfo(
@@ -67,26 +68,28 @@ class StorageService:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "已存在相同的存储记录，请稍后重新上传")
 
     @staticmethod
-    async def delayed_cleanup(storage_id: str, delay: int = 1800):
-        """定时清理创建后未在规定时间内 FINISHED / FINISHED 但是 ref_count = 0 的 Storage 记录 以及 磁盘存储"""
+    async def delayed_cleanup():
+        while True:
+            try:
+                async with AsyncSessionLocal.begin() as db:
+                    cutoff = datetime.now(timezone.utc) - timedelta(days=1)
+                    await db.execute(
+                        delete(Storage).where(
+                            Storage.status.in_([Status.UPLOADING, Status.FAILED]),
+                            Storage.modified_at < cutoff,
+                        )
+                    )
+                    await db.execute(
+                        delete(Storage).where(
+                            Storage.status == Status.FINISHED,
+                            Storage.ref_count == 0,
+                            Storage.modified_at < cutoff,
+                        )
+                    )
+            except Exception:
+                logger.exception("cleanup failed")
 
-        await asyncio.sleep(delay)
-
-        async with AsyncSessionLocal.begin() as db:
-            deleted_storage = await db.scalar(
-                delete(Storage)
-                .where(
-                    Storage.id == storage_id,
-                    (Storage.status != Status.FINISHED)
-                    | ((Storage.status == Status.FINISHED) & (Storage.ref_count == 0)),
-                )
-                .returning(Storage)
-            )
-
-            if deleted_storage:
-                physical_path = STORAGE_PATH / storage_id
-                if physical_path.exists():
-                    physical_path.unlink()
+            await asyncio.sleep(24 * 60 * 60)
 
     @staticmethod
     async def refresh_storage_status(storage: Storage, db: AsyncSession):
