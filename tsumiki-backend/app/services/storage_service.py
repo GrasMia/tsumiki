@@ -67,9 +67,7 @@ class StorageService:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "已存在相同的存储记录，请稍后重新上传")
 
     @staticmethod
-    async def delayed_cleanup(storage_id: str, delay: int = 1800):
-        """定时清理创建后未在规定时间内 FINISHED / FINISHED 但是 ref_count = 0 的 Storage 记录 以及 磁盘存储"""
-
+    async def delayed_cleanup(storage_id: str, delay: int = 3600):
         await asyncio.sleep(delay)
 
         async with AsyncSessionLocal.begin() as db:

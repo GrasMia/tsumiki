@@ -23,6 +23,7 @@ def init_db_sync(tables: Sequence[Table] | None = None):
                 total_space=0,
             )
         )
+        db.flush()
         db.merge(
             Dir(
                 id=0,
@@ -52,6 +53,7 @@ async def init_db_async(tables: Sequence[Table] | None = None):
                 total_space=0,
             )
         )
+        await db.flush()
         await db.merge(
             Dir(
                 id=0,
