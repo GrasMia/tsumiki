@@ -5,9 +5,9 @@ from sqlalchemy import insert, select
 
 from app.config import settings
 from app.models import User, Dir
+from app.schemas.user import UserInfo
 from app.db import get_db_async, get_db_async_auto
 from app.schemas import RegisterParams, AuthResponse
-from app.schemas.user import UserInfo
 from app.utils import validate_password, validate_username
 from app.core.security import verify_password, get_password_hash
 from app.exceptions import EMAIL_ALREADY_EXISTS, USERNAME_ALREADY_EXISTS, USER_NOT_FOUND

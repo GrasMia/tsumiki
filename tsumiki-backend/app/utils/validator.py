@@ -1,5 +1,5 @@
-import re
 from fastapi import HTTPException, status
+import re
 
 # 禁止字符 <>:"|?* 与 控制字符 \x00-\x1f 以及 空格 \s
 FORBIDDEN_PATTERN = re.compile(r'[<>:"|?*\x00-\x1f]')
@@ -35,7 +35,7 @@ WINDOWS_RESERVED_NAMES = {
 SERVER_RESERVED_NAMES = {"profile"}
 
 # 服务器保留用户名（仅用户名禁止）
-SERVER_RESERVED_USERNAMES = {"auth", "users", "disk", "static", "public", "admin", "root"}
+SERVER_RESERVED_USERNAMES = {"auth", "users", "disk", "trashes", "shares", "static", "public", "admin", "root"}
 
 
 MIN_USERNAME_LENGTH = 5

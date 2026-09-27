@@ -1,5 +1,5 @@
-from typing import Sequence
 from sqlalchemy import Table
+from typing import Sequence
 from app.models import Base, User, Dir
 from app.config import settings
 from .session import sync_engine, SyncSessionLocal, async_engine, AsyncSessionLocal

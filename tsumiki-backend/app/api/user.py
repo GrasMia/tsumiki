@@ -5,8 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
-from app.db import get_db_async, get_db_async_auto
 from app.services import UserService
+from app.db import get_db_async, get_db_async_auto
 from app.core.dependencies import get_current_user_id
 from app.schemas import UpdatePasswordParams, UserInfo
 from app.utils import validate_password, validate_username

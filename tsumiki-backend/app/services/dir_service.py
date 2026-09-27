@@ -1,7 +1,8 @@
 from fastapi import HTTPException, status
+from sqlalchemy import select, insert, delete, update, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, func, select, insert, update
+
 
 from app.models import File, Dir
 from app.exceptions import DIR_ALREADY_EXISTS
@@ -99,7 +100,9 @@ class DirService:
             new_path = f"{target_dir.path}{dir_name}/"
 
             for dir_id in dirs_id:
-                stmt = update(Dir).where(Dir.id == dir_id).values(path=func.regexp_replace(Dir.path, old_path, new_path))
+                stmt = (
+                    update(Dir).where(Dir.id == dir_id).values(path=func.regexp_replace(Dir.path, old_path, new_path))
+                )
                 await db.execute(stmt)
 
             move_dir.parent_id = target_dir.id
