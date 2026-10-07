@@ -1,15 +1,8 @@
-from sqlalchemy import Integer, String, Enum
+from sqlalchemy import Integer, String, Enum, Index, text
 from sqlalchemy.orm import Mapped, mapped_column
-
 import uuid
 import enum
-
 from app.models import Base
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from app.models import File
-
 
 class Status(enum.Enum):
     UPLOADING = "uploading"
@@ -29,3 +22,21 @@ class Storage(Base):
     chunk_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_chunk_size: Mapped[int] = mapped_column(Integer, nullable=False)
     total_chunks: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    __table_args__ = (
+        # timeout
+        Index(
+            "ix_storages_cleanup_timeout",
+            "status",
+            "modified_at",
+            postgresql_where=text("status IN ('UPLOADING', 'FAILED')"),
+        ),
+        # orphan
+        Index(
+            "ix_storages_orphan",
+            "status",
+            "ref_count",
+            "modified_at",
+            postgresql_where=text("status = 'FINISHED' AND ref_count = 0"),
+        ),
+    )

@@ -1,8 +1,7 @@
-from datetime import datetime
 from fastapi import Form
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from datetime import datetime
 from app.models import Status
-
 
 class DirItem(BaseModel):
     name: str
@@ -32,7 +31,7 @@ class FileItem(BaseModel):
 
 class FileMetadata(BaseModel):
     name: str
-    size: int = Field(gt=0)
+    size: int = Field(gt=0, lt=2**31)
     sha256: str = Field(min_length=64, max_length=64)
 
 
@@ -63,10 +62,10 @@ class ChunkMetadata(BaseModel):
 #     name: str
 #     size: int
 #     sha256: str = Field(min_length=64, max_length=64)
-#     deleted_at: datetime
+#     created_at: datetime
 #     expires_at: datetime
 
-#     @field_serializer(*["deleted_at", "expires_at"])
+#     @field_serializer(*["created_at", "expires_at"])
 #     def serialize_datetime(self, val: datetime) -> str:
 #         return val.replace(microsecond=0).isoformat()
 

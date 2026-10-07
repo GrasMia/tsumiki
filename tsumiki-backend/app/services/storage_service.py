@@ -1,5 +1,5 @@
 from fastapi import UploadFile, HTTPException, status
-from sqlalchemy import delete, insert, select
+from sqlalchemy import select, insert, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,6 +85,30 @@ class StorageService:
                 physical_path = STORAGE_PATH / storage_id
                 if physical_path.exists():
                     physical_path.unlink()
+
+    # @staticmethod
+    # async def delayed_cleanup():
+    #     while True:
+    #         try:
+    #             async with AsyncSessionLocal.begin() as db:
+    #                 cutoff = datetime.now(timezone.utc) - timedelta(days=1)
+    #                 await db.execute(
+    #                     delete(Storage).where(
+    #                         Storage.status.in_([Status.UPLOADING, Status.FAILED]),
+    #                         Storage.modified_at < cutoff,
+    #                     )
+    #                 )
+    #                 await db.execute(
+    #                     delete(Storage).where(
+    #                         Storage.status == Status.FINISHED,
+    #                         Storage.ref_count == 0,
+    #                         Storage.modified_at < cutoff,
+    #                     )
+    #                 )
+    #         except Exception:
+    #             logger.exception("cleanup failed")
+
+    #         await asyncio.sleep(24 * 60 * 60)
 
     @staticmethod
     async def refresh_storage_status(storage: Storage, db: AsyncSession):

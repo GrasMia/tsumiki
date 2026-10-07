@@ -1,9 +1,8 @@
-from fastapi import HTTPException, status
-from fastapi import Security
+from fastapi import Security,HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from datetime import datetime, timedelta, timezone
 import jwt
+from datetime import datetime, timedelta, timezone
 
 from app.config import settings
 from app.exceptions import INVALID_CREDENTIALS, USER_INCONSISTENT
